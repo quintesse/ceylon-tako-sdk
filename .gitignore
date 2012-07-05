@@ -1,3 +1,9 @@
+build/
+target/
+modules/
+.settings/
+JDTClasses/
+
 *.class
 
 # Package Files #
