@@ -64,6 +64,18 @@ String? childPath(File parent, File child) {
     }
 }
 
+File? findIndex(File dir, String[]? indices) {
+    if (exists indices) {
+        for (String idx in indices) {
+            File f = File(dir, idx);
+            if (f.\iexists() && f.file) {
+                return f;
+            }
+        }
+    }
+    return null;
+}
+
 class MyChannelFutureProgressListener(FileRegion region, String path) satisfies ChannelFutureProgressListener {
     shared actual void operationComplete(ChannelFuture? future) {
         region.releaseExternalResources();
@@ -74,7 +86,7 @@ class MyChannelFutureProgressListener(FileRegion region, String path) satisfies 
     }
 }
             
-class HttpStaticFileServerHandler(Boolean list) extends SimpleChannelUpstreamHandler() {
+class HttpStaticFileServerHandler(Boolean list, String[]? indices) extends SimpleChannelUpstreamHandler() {
 
     shared actual void messageReceived(ChannelHandlerContext? ctx2, MessageEvent? e2) {
         ChannelHandlerContext ctx = assertNotNull<ChannelHandlerContext>(ctx2);
@@ -94,7 +106,7 @@ class HttpStaticFileServerHandler(Boolean list) extends SimpleChannelUpstreamHan
         String path = assertNotNull(path2);
 
         File root = File("");
-        File file = File(path);
+        variable File file := File(path);
         if (file.hidden || !file.\iexists() || !exists childPath(root, file)) {
             sendError(ctx, \iNOT_FOUND);
             return;
@@ -102,6 +114,12 @@ class HttpStaticFileServerHandler(Boolean list) extends SimpleChannelUpstreamHan
         
         Channel ch = e.channel;
         ChannelFuture writeFuture;
+        
+        if (file.directory) {
+            if (exists index = findIndex(file, indices)) {
+                file := index;
+            }
+        }
         if (!file.file) {
             if (!file.directory || !list) {
                 sendError(ctx, \iFORBIDDEN);
@@ -236,7 +254,7 @@ class HttpStaticFileServerHandler(Boolean list) extends SimpleChannelUpstreamHan
     }
 }
 
-class HttpStaticFileServerPipelineFactory(Boolean list) satisfies ChannelPipelineFactory {
+class HttpStaticFileServerPipelineFactory(Boolean list, String[]? indices) satisfies ChannelPipelineFactory {
     shared actual ChannelPipeline pipeline {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = createPipeline();
@@ -251,12 +269,12 @@ class HttpStaticFileServerPipelineFactory(Boolean list) satisfies ChannelPipelin
         pipeline.addLast("encoder", HttpResponseEncoder());
         pipeline.addLast("chunkedWriter", ChunkedWriteHandler());
 
-        pipeline.addLast("handler", HttpStaticFileServerHandler(list));
+        pipeline.addLast("handler", HttpStaticFileServerHandler(list, indices));
         return pipeline;
     }
 }
 
-void start(Integer port, Boolean list) {
+void start(Integer port, Boolean list, String[]? indices) {
     // Configure the server.
     ServerBootstrap bootstrap = ServerBootstrap(
         NioServerSocketChannelFactory(
@@ -264,7 +282,7 @@ void start(Integer port, Boolean list) {
             newCachedThreadPool()));
   
     // Set up the event pipeline factory.
-    bootstrap.pipelineFactory := HttpStaticFileServerPipelineFactory(list);
+    bootstrap.pipelineFactory := HttpStaticFileServerPipelineFactory(list, indices);
   
     // Bind and start to accept incoming connections.
     bootstrap.bind(InetSocketAddress(port));
@@ -286,6 +304,13 @@ void run() {
             name="list";
             match="-l|--list=";
             docs="Allows listing of directories";
+        },
+        Option {
+            name="indices";
+            match="-i|--index=";
+            docs="Defines an index file to be served instead of a directory listing";
+            hasValue=true;
+            multiple=true;
         }
     };
     
@@ -302,7 +327,8 @@ void run() {
             } else {
                 Integer port = parseInteger(res.options.get("port").first) else 8080;
                 Boolean list = res.options.containsKey("list");
-                start(port, list);
+                String[]? indices = res.options.get("indices");
+                start(port, list, indices);
             }
         }
     }
