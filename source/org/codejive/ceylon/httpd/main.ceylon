@@ -31,7 +31,7 @@ import org.jboss.netty.handler.codec.http {
     HttpHeaders {
         setContentLength,
         isKeepAlive,
-        Names { CONTENT_TYPE }
+        Names { CONTENT_TYPE, CONTENT_LENGTH }
     }, ...
 }
 import org.jboss.netty.handler.stream { ChunkedWriteHandler, ChunkedFile }
@@ -51,6 +51,16 @@ HttpRequest httpRequest(Object obj) {
         return obj;
     } else {
         throw Exception("Not a HttpRequest");
+    }
+}
+
+String? childPath(File parent, File child) {
+    String pp = parent.canonicalPath;
+    String cp = child.canonicalPath;
+    if (cp.startsWith(pp)) {
+        return cp.span(pp.size, null);
+    } else {
+        return null;
     }
 }
 
@@ -83,8 +93,9 @@ class HttpStaticFileServerHandler(Boolean list) extends SimpleChannelUpstreamHan
         }
         String path = assertNotNull(path2);
 
+        File root = File("");
         File file = File(path);
-        if (file.hidden || !file.\iexists()) {
+        if (file.hidden || !file.\iexists() || !exists childPath(root, file)) {
             sendError(ctx, \iNOT_FOUND);
             return;
         }
@@ -96,8 +107,40 @@ class HttpStaticFileServerHandler(Boolean list) extends SimpleChannelUpstreamHan
                 sendError(ctx, \iFORBIDDEN);
                 return;
             }
-
-            writeFuture = ch.write("hallo");
+            
+            value buf = StringBuilder();
+            buf.append("<html><head>");
+            buf.append("<title>Contents of ...</title>");
+            buf.append("</head><body>");
+            
+            value files = file.listFiles();
+            for (File f in files) {
+                String? p = childPath(root, f);
+                if (!f.hidden) {
+                    if (exists p) {
+                        buf.append("<a href=\"");
+                        buf.append(p.replace("\\", "/"));
+                        buf.append("\">");
+                        buf.append(f.name);
+                        buf.append("</a><br>");
+                    }
+                }
+            }
+            
+            buf.append("</body></html>");
+            
+            // Build the response object.
+            HttpResponse response = DefaultHttpResponse(\iHTTP_1_1, \iOK);
+            response.content := copiedBuffer(javaString(buf.string), \iUTF_8);
+            response.setHeader(\iCONTENT_TYPE, "text/html; charset=UTF-8");
+    
+            if (isKeepAlive(request)) {
+                // Add 'Content-Length' header only for a keep-alive connection.
+                response.setHeader(\iCONTENT_LENGTH, response.content.readableBytes());
+            }
+            
+            // Write the initial line, header and content.
+            writeFuture = ch.write(response);
         } else {
             RandomAccessFile raf;
             try {
