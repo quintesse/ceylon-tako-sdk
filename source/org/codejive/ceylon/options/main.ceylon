@@ -1,6 +1,5 @@
 
-//import fr.epardaud.collections { HashMap }
-import java.util { Map, HashMap }
+import ceylon.collection { MutableMap, HashMap }
 
 doc "Defines a single command line option"
 shared class Option(
@@ -33,39 +32,6 @@ shared class Option(
     shared Boolean multiple;
 }
 
-doc "The result returned by a successful invocation of the `Options.parse()` method"
-shared class OptionsResult(
-        options,
-        arguments) {
-    doc "The options that have been found in the argument list"
-    shared Map<String, Sequence<String>> options;
-    doc "The remaining arguments that are not options"
-    shared variable String[] arguments;
-    shared actual String string {
-        return "OptionsResult(" options ", " arguments ")";
-    }
-}
-
-doc "The result returned by an unsuccessful invocation of the `Options.parse()` method"
-shared class OptionsError(String? initialMessage) {
-    StringBuilder msgs = StringBuilder();
-    
-    if (exists initialMessage) {
-        msgs.append(initialMessage);
-    }
-    
-    shared void append(String message) {
-        msgs.append(message);
-        msgs.append("\n");
-    }
-    shared String messages {
-        return msgs.string;
-    }
-    shared actual String string {
-        return "OptionsError(" msgs.string ")";
-    }
-}
-
 doc "An easy-to-use parser for command line arguments that takes
 a list of Option classes defining the possible options accepted
 by the parser and returns a OptionsResult containing a map of
@@ -88,24 +54,57 @@ shared class Options(
     String optionStart = "-";
     String matchSeparator = "|";
     String valueSeparator = "=";
+
+    doc "The result returned by a successful invocation of the `Options.parse()` method"
+    shared class Result(
+            options,
+            arguments) {
+        doc "The options that have been found in the argument list"
+        shared MutableMap<String, Sequence<String>> options;
+        doc "The remaining arguments that are not options"
+        shared variable String[] arguments;
+        shared actual String string {
+            return "OptionsResult(" options ", " arguments ")";
+        }
+    }
+    
+    doc "The result returned by an unsuccessful invocation of the `Options.parse()` method"
+    shared class Error(String? initialMessage) {
+        StringBuilder msgs = StringBuilder();
+        
+        if (exists initialMessage) {
+            msgs.append(initialMessage);
+        }
+        
+        shared void append(String message) {
+            msgs.append(message);
+            msgs.append("\n");
+        }
+        shared String messages {
+            return msgs.string;
+        }
+        shared actual String string {
+            return "OptionsError(" msgs.string ")";
+        }
+    }
     
     doc "Parses the passed arguments looking for options and parameters
     and returns the result into OptionsResult which contains a map of options
     and the remaining arguments or a OptionsError with error messages if
     the arguments could not be parsed correctly"
-    shared OptionsResult|OptionsError parse(
+    shared Result|Error parse(
             doc "The arguments to parse"
             String[] arguments) {
         // Show a special message if no parameters are passed and
         // a special help message was defined for such a case 
         if (arguments.empty) {
             if (exists noArgsHelp) {
-                return OptionsError("" usage?"" "\n" noArgsHelp "");
+                return Error("" usage?"" "\n" noArgsHelp "");
             }
         }
         
         value optmap = HashMap<String, Sequence<String>>(); 
-        value result = OptionsResult(optmap, arguments);
+        value result = Result(optmap, arguments);
         while (nonempty args=result.arguments) {
             if (args.first.startsWith(optionStart)) {
                 value err = parseOpt(result, args);
@@ -122,12 +121,12 @@ shared class Options(
     
     doc "Takes a OptionsResult returned by a previous call to `parse()`
     and checks it for further errors"
-    shared OptionsError? validate(OptionsResult result) {
+    shared Error? validate(Result result) {
         for (Option opt in options) {
-            if (result.options.containsKey(opt.name)) {
+            if (result.options.defines(opt.name)) {
             } else {
                 if (opt.required) {
-                    value err = OptionsError("Option " opt.match " is required");
+                    value err = Error("Option " opt.match " is required");
                     return err;
                 }
             }
@@ -149,7 +148,7 @@ shared class Options(
         }
     }
     
-    OptionsError? parseOpt(OptionsResult result, Sequence<String> args) {
+    Error? parseOpt(Result result, Sequence<String> args) {
         for (Option opt in options) {
             value matches = opt.match.split((Character c) matchSeparator.contains(c), true);
             for (String match in matches) {
@@ -164,7 +163,7 @@ shared class Options(
                         } else {
                             String m = match.initial(match.size-1);
                             if (args.first.startsWith(m)) {
-                                return OptionsError("Missing value for option " m "");
+                                return Error("Missing value for option " m "");
                             }
                         }
                     } else {
@@ -174,7 +173,7 @@ shared class Options(
                                 val := therest.first;
                                 rest := therest.rest;
                             } else {
-                                return OptionsError("Missing value for option " match "");
+                                return Error("Missing value for option " match "");
                             }
                         }
                     }
@@ -186,7 +185,7 @@ shared class Options(
                 }
                 if (exists v=val) {
                     value err = setOpt(result, opt, v);
-                    if (is OptionsError err) {
+                    if (is Error err) {
                         return err;
                     }
                     result.arguments := rest?{};
@@ -194,17 +193,18 @@ shared class Options(
                 }
             }
         }
-        return OptionsError("Unknown option " args.first "");
+        return Error("Unknown option " args.first "");
     }
     
-    OptionsError? setOpt(OptionsResult result, Option opt, String val) {
-        if (result.options.containsKey(opt.name)) {
+    Error? setOpt(Result result, Option opt, String val) {
+        value curr = result.options[opt.name];
+        if (exists curr) {
             if (opt.multiple) {
-                value b = SequenceAppender<String>(result.options.get(opt.name));
+                value b = SequenceAppender<String>(curr);
                 b.append(val);
                 result.options.put(opt.name, b.sequence);
             } else {
-                return OptionsError("Multiple values not allowed for option " opt.match "");
+                return Error("Multiple values not allowed for option " opt.match "");
             }
         } else {
             result.options.put(opt.name, {val});
