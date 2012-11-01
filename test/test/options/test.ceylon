@@ -22,6 +22,18 @@ void run() {
             matches={"o","out"};
             docs="The output file";
             hasValue=true;
+        },
+        Option {
+            name="debug";
+            matches={"d","debug"};
+            docs="Enable debugging";
+        },
+        Option {
+            name="logging";
+            matches={"v","verbose"};
+            docs="Enable logging";
+            hasOptionalValue=true;
+            defaultOptionalValue="all";
         }
     };
 
@@ -124,18 +136,34 @@ void run() {
     testError({}, "Usage: ceylon acme.doodle <options> <things>\nuse -h or --help for a list of possible options");
     testResult({"-h"}, {"help"->{"true"}}, {});
     testResult({"--help"}, {"help"->{"true"}}, {});
-    // Check required opts
+    // Check missing required opts
     testError({"aap"}, "Option -f or --file is required");
     testError({"-f"}, "Missing value for option -f");
     testError({"--file"}, "Missing value for option --file");
-    // Check all short opt forms
+    // Check all short opt forms with required value
     testResult({"-f", "test"}, {"file"->{"test"}}, {});
     testResult({"-f="}, {"file"->{""}}, {});
     testResult({"-f=test"}, {"file"->{"test"}}, {});
-    // Check all long opt forms
+    // Check all long opt forms with required value
     testResult({"--file", "test"}, {"file"->{"test"}}, {});
     testResult({"--file="}, {"file"->{""}}, {});
     testResult({"--file=test"}, {"file"->{"test"}}, {});
+    // Check short flag forms
+    testResult({"-f=test", "-d"}, {"file"->{"test"}, "debug"->{"true"}}, {});
+    testResult({"-f=test", "-d", "test"}, {"file"->{"test"}, "debug"->{"true"}}, {"test"});
+    // Check long flag forms
+    testResult({"-f=test", "--debug"}, {"file"->{"test"}, "debug"->{"true"}}, {});
+    testResult({"-f=test", "--debug", "test"}, {"file"->{"test"}, "debug"->{"true"}}, {"test"});
+    // Check all short opt forms with optional value
+    testResult({"-f=test", "-v"}, {"file"->{"test"}, "logging"->{"all"}}, {});
+    testResult({"-f=test", "-v="}, {"file"->{"test"}, "logging"->{""}}, {});
+    testResult({"-f=test", "-v=foo"}, {"file"->{"test"}, "logging"->{"foo"}}, {});
+    testResult({"-f=test", "-v", "foo"}, {"file"->{"test"}, "logging"->{"all"}}, {"foo"});
+    // Check all long opt forms with optional value
+    testResult({"-f=test", "--verbose"}, {"file"->{"test"}, "logging"->{"all"}}, {});
+    testResult({"-f=test", "--verbose="}, {"file"->{"test"}, "logging"->{""}}, {});
+    testResult({"-f=test", "--verbose=foo"}, {"file"->{"test"}, "logging"->{"foo"}}, {});
+    testResult({"-f=test", "--verbose", "foo"}, {"file"->{"test"}, "logging"->{"all"}}, {"foo"});
     // All kinds of combinations
     testResult({"-f", "test", "noot"}, {"file"->{"test"}}, {"noot"});
     testResult({"--file", "test", "noot"}, {"file"->{"test"}}, {"noot"});
