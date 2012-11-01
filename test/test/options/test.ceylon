@@ -8,10 +8,10 @@ void run() {
     value opts = Options {
         usage = "Usage: ceylon acme.doodle <options> <things>";
         noArgsHelp = "use -h or --help for a list of possible options";
-        Option("help", "-h|--help", "This help"),
+        Option("help", {"-h","--help"}, "This help"),
         Option {
             name="file";
-            match="-f|--file=";
+            matches={"-f","--file="};
             docs="The file to read, can be used multiple times";
             hasValue=true;
             required=true;
@@ -19,7 +19,7 @@ void run() {
         },
         Option {
             name="out";
-            match="-o|--out=";
+            matches={"-o","--out="};
             docs="The output file";
             hasValue=true;
         }
@@ -123,7 +123,7 @@ void run() {
     testError({}, "Usage: ceylon acme.doodle <options> <things>\nuse -h or --help for a list of possible options");
     testResult({"-h"}, {"help"->{"true"}}, {});
     testResult({"--help"}, {"help"->{"true"}}, {});
-    testError({"aap"}, "Option -f|--file= is required");
+    testError({"aap"}, "Option -f or --file= is required");
     testError({"-f"}, "Missing value for option -f");
     testResult({"-f", "test"}, {"file"->{"test"}}, {});
     testResult({"-f", "test", "noot"}, {"file"->{"test"}}, {"noot"});
@@ -138,7 +138,7 @@ void run() {
     testError({"--file=test", "--file=test2", "-o"}, "Missing value for option -o");
     testResult({"--file=test", "--file=test2", "--out="}, {"file"->{"test", "test2"}, "out"->{""}}, {});
     testResult({"--file=test", "--file=test2", "--out=test3"}, {"file"->{"test", "test2"}, "out"->{"test3"}}, {});
-    testError({"--file=test", "--file=test2", "--out=test3", "--out=test4"}, "Multiple values not allowed for option -o|--out=");
+    testError({"--file=test", "--file=test2", "--out=test3", "--out=test4"}, "Multiple values not allowed for option -o or --out=");
     testResult({"--file=test", "--file=test2", "--out=test3", "mies"}, {"file"->{"test", "test2"}, "out"->{"test3"}}, {"mies"});
     testError({"-x"}, "Unknown option -x");
     testResult({"-f", "test", "noot", "-f", "test", "-x"}, {"file"->{"test"}}, {"noot", "-f", "test", "-x"});
