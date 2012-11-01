@@ -4,7 +4,7 @@ import ceylon.collection { MutableMap, HashMap }
 doc "Defines a single command line option"
 shared class Option(
         name,
-        match,
+        matches,
         docs,
         hasValue=false,
         required=false,
@@ -12,14 +12,13 @@ shared class Option(
     doc "The name of the option. Can be used to look it up in the result"
     shared String name;
     doc "The literal text used to match the option, usually in the form of
-    for example `-f` or `--file`. Multiple possibilitues can be combined
-    by using the defined separator (default `|`) like this `-f|--file`.
+    for example `-f` or `--file`. Multiple possible matches can passed.
     If an option has a value it is by default assumed to be the next
     argument in the argument list, but if the matching literal ends with
     the defined separator (default `=`) the value is assumed to have been
     appended to the option itself. An example, the option `--file=` would
     match the argument `--file=filename.txt`"
-    shared String match;
+    shared Sequence<String> matches;
     doc "A description of the option"
     shared String docs;
     doc "Determines if the option has an associated value"
@@ -52,7 +51,6 @@ shared class Options(
     shared Iterable<Option> options = _options;
     
     String optionStart = "-";
-    String matchSeparator = "|";
     String valueSeparator = "=";
 
     doc "The result returned by a successful invocation of the `Options.parse()` method"
@@ -126,7 +124,7 @@ shared class Options(
             if (result.options.defines(opt.name)) {
             } else {
                 if (opt.required) {
-                    value err = Error("Option " opt.match " is required");
+                    value err = Error("Option " matchesString(opt.matches) " is required");
                     return err;
                 }
             }
@@ -144,14 +142,13 @@ shared class Options(
     doc "Print help text for all options"
     shared void printHelp() {
         for (Option opt in options) {
-            print("    " opt.match "\t\t" opt.docs "");
+            print("    " matchesString(opt.matches) "\t\t" opt.docs "");
         }
     }
     
     Error? parseOpt(Result result, Sequence<String> args) {
         for (Option opt in options) {
-            value matches = opt.match.split((Character c) matchSeparator.contains(c), true);
-            for (String match in matches) {
+            for (String match in opt.matches) {
                 variable String? val := null;
                 variable String[]? rest := null;
                 if (opt.hasValue) {
@@ -204,11 +201,23 @@ shared class Options(
                 b.append(val);
                 result.options.put(opt.name, b.sequence);
             } else {
-                return Error("Multiple values not allowed for option " opt.match "");
+                return Error("Multiple values not allowed for option " matchesString(opt.matches) "");
             }
         } else {
             result.options.put(opt.name, {val});
         }
         return null;
+    }
+    
+    String matchesString(Sequence<String> matches) {
+        if (matches.size == 1) {
+            return matches.first;
+        } else if (matches.size == 2) {
+            assert(nonempty rest=matches.rest);
+            return "" matches.first " or " rest.first "";
+        } else {
+            assert(nonempty rest=matches.rest);
+            return "" matches.first ", " matchesString(rest) "";
+        }
     }
 }
