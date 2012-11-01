@@ -8,10 +8,10 @@ void run() {
     value opts = Options {
         usage = "Usage: ceylon acme.doodle <options> <things>";
         noArgsHelp = "use -h or --help for a list of possible options";
-        Option("help", {"-h","--help"}, "This help"),
+        Option("help", {"h","help"}, "This help"),
         Option {
             name="file";
-            matches={"-f","--file="};
+            matches={"f","file"};
             docs="The file to read, can be used multiple times";
             hasValue=true;
             required=true;
@@ -19,7 +19,7 @@ void run() {
         },
         Option {
             name="out";
-            matches={"-o","--out="};
+            matches={"o","out"};
             docs="The output file";
             hasValue=true;
         }
@@ -120,16 +120,25 @@ void run() {
         }
     }
 
+    // Check help/usage messages
     testError({}, "Usage: ceylon acme.doodle <options> <things>\nuse -h or --help for a list of possible options");
     testResult({"-h"}, {"help"->{"true"}}, {});
     testResult({"--help"}, {"help"->{"true"}}, {});
-    testError({"aap"}, "Option -f or --file= is required");
+    // Check required opts
+    testError({"aap"}, "Option -f or --file is required");
     testError({"-f"}, "Missing value for option -f");
-    testResult({"-f", "test"}, {"file"->{"test"}}, {});
-    testResult({"-f", "test", "noot"}, {"file"->{"test"}}, {"noot"});
     testError({"--file"}, "Missing value for option --file");
+    // Check all short opt forms
+    testResult({"-f", "test"}, {"file"->{"test"}}, {});
+    testResult({"-f="}, {"file"->{""}}, {});
+    testResult({"-f=test"}, {"file"->{"test"}}, {});
+    // Check all long opt forms
+    testResult({"--file", "test"}, {"file"->{"test"}}, {});
     testResult({"--file="}, {"file"->{""}}, {});
     testResult({"--file=test"}, {"file"->{"test"}}, {});
+    // All kinds of combinations
+    testResult({"-f", "test", "noot"}, {"file"->{"test"}}, {"noot"});
+    testResult({"--file", "test", "noot"}, {"file"->{"test"}}, {"noot"});
     testError({"--file=test", "-f"}, "Missing value for option -f");
     testResult({"--file=test", "-f", "test2"}, {"file"->{"test", "test2"}}, {});
     testError({"--file=test", "--file"}, "Missing value for option --file");
@@ -138,8 +147,13 @@ void run() {
     testError({"--file=test", "--file=test2", "-o"}, "Missing value for option -o");
     testResult({"--file=test", "--file=test2", "--out="}, {"file"->{"test", "test2"}, "out"->{""}}, {});
     testResult({"--file=test", "--file=test2", "--out=test3"}, {"file"->{"test", "test2"}, "out"->{"test3"}}, {});
-    testError({"--file=test", "--file=test2", "--out=test3", "--out=test4"}, "Multiple values not allowed for option -o or --out=");
+    testError({"--file=test", "--file=test2", "--out=test3", "--out=test4"}, "Multiple values not allowed for option -o or --out");
     testResult({"--file=test", "--file=test2", "--out=test3", "mies"}, {"file"->{"test", "test2"}, "out"->{"test3"}}, {"mies"});
+    // Check cases (short opts are case sensitive, long opts are not)
+    testError({"-F", "test"}, "Unknown option -F");
+    testResult({"--FILe", "test"}, {"file"->{"test"}}, {});
+    // Check completely unknown option
     testError({"-x"}, "Unknown option -x");
+    // Check that we don't parse anymore after the first non-opt argument
     testResult({"-f", "test", "noot", "-f", "test", "-x"}, {"file"->{"test"}}, {"noot", "-f", "test", "-x"});
 }
