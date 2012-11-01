@@ -1,129 +1,64 @@
-import java.io { File { fileSeparator=separator, fileSeparatorChar=separatorChar }, ... }
-import java.lang { Throwable, System { sysOut=\iout, getSystemProperty=getProperty }  }
-import java.net { InetSocketAddress, URLDecoder { decodeUrl=decode } }
-import java.util.concurrent { Executors { newCachedThreadPool } }
 
-import ceylon.interop.java { javaString }
-
-import org.codejive.ceylon.options { Options, Option, OptionsResult, OptionsError }
-
-import org.jboss.netty.bootstrap { ServerBootstrap }
-import org.jboss.netty.channel.socket.nio { NioServerSocketChannelFactory }
-import org.jboss.netty.channel {
-    Channels { createPipeline=pipeline },
-    ChannelFutureListener { CLOSE },
-    ChannelFutureProgressListener,
-    FileRegion,
-    DefaultFileRegion,
-    ExceptionEvent,
-    SimpleChannelUpstreamHandler, ... }
-import org.jboss.netty.handler.codec.frame { TooLongFrameException }
-import org.jboss.netty.handler.codec.http {
-    HttpRequest,
-    HttpResponse,
-    DefaultHttpResponse,
-    HttpRequestDecoder,
-    HttpChunkAggregator,
-    HttpResponseEncoder,
-    HttpResponseStatus { OK, METHOD_NOT_ALLOWED, FORBIDDEN, NOT_FOUND, BAD_REQUEST, INTERNAL_SERVER_ERROR },
-    HttpMethod { GET },
-    HttpVersion { HTTP_1_1 },
-    HttpHeaders {
-        setContentLength,
-        isKeepAlive,
-        Names { CONTENT_TYPE, CONTENT_LENGTH }
-    }, ...
+import java.io { File, OutputStream, RandomAccessFile, FileNotFoundException }
+import java.lang { System { sysOut=\iout, getSystemProperty=getProperty }, Thread { currentThread } }
+import java.net {
+    URI,
+    InetSocketAddress,
+    HttpURLConnection { \iHTTP_OK, \iHTTP_BAD_METHOD, \iHTTP_FORBIDDEN, \iHTTP_NOT_FOUND, \iHTTP_INTERNAL_ERROR }
 }
-import org.jboss.netty.handler.stream { ChunkedWriteHandler, ChunkedFile }
-import org.jboss.netty.util { CharsetUtil { UTF_8 }}
-import org.jboss.netty.buffer { ChannelBuffers { copiedBuffer } }
+import java.nio.file { Files { probeContentType } }
 
-T assertNotNull<T>(T? arg) given T satisfies Object {
-    if (exists arg) {
-        return arg;
-    } else {
-        throw Exception("Unexpected null");
-    }
-}
+import ceylon.interop.java { javaString, createByteArray }
 
-HttpRequest httpRequest(Object obj) {
-    if (is HttpRequest obj) {
-        return obj;
-    } else {
-        throw Exception("Not a HttpRequest");
-    }
-}
+import org.codejive.ceylon.options { Options, Option }
 
-String? childPath(File parent, File child) {
-    String pp = parent.canonicalPath;
-    String cp = child.canonicalPath;
-    if (cp.startsWith(pp)) {
-        return cp.span(pp.size, null);
-    } else {
-        return null;
-    }
-}
+import com.sun.net.httpserver { HttpServer { createHttpServer=create }, HttpHandler, HttpExchange, Headers }
 
-File? findIndex(File dir, String[]? indices) {
-    if (exists indices) {
-        for (String idx in indices) {
-            File f = File(dir, idx);
-            if (f.\iexists() && f.file) {
-                return f;
+class CeylonHttpHandler(Boolean list, String[]? indices, Boolean verbose) satisfies HttpHandler {
+    
+    shared actual void handle(HttpExchange x) {
+        if (x.requestMethod.uppercased != "GET") {
+            sendError(x, \iHTTP_BAD_METHOD);
+            if (verbose) {
+                sysOut.println("405 Method Not Allowed");
+            }
+            return;
+        }
+        
+        try {
+            if (verbose) {
+                sysOut.print("GET " x.requestURI " ");
+            }
+            String result = handleGet(x);
+            if (verbose) {
+                sysOut.println(result);
+            }
+        } catch (Exception ex) {
+            sendError(x, \iHTTP_INTERNAL_ERROR);
+            if (verbose) {
+                sysOut.println("500 Internal Server Error");
             }
         }
     }
-    return null;
-}
-
-class MyChannelFutureProgressListener(FileRegion region, String path) satisfies ChannelFutureProgressListener {
-    shared actual void operationComplete(ChannelFuture? future) {
-        region.releaseExternalResources();
-    }
-
-    shared actual void operationProgressed(ChannelFuture? future, Integer amount, Integer current, Integer total) {
-        sysOut.printf("%s: %d / %d (+%d)%n", path, current, total, amount);
-    }
-}
-            
-class HttpStaticFileServerHandler(Boolean list, String[]? indices) extends SimpleChannelUpstreamHandler() {
-
-    shared actual void messageReceived(ChannelHandlerContext? ctx2, MessageEvent? e2) {
-        ChannelHandlerContext ctx = assertNotNull<ChannelHandlerContext>(ctx2);
-        MessageEvent e = assertNotNull(e2);
-        
-        HttpRequest request = httpRequest(e.message);
-        if (request.method != \iGET) {
-            sendError(ctx, \iMETHOD_NOT_ALLOWED);
-            return;
-        }
-
-        String? path2 = sanitizeUri(request.uri);
-        if (!exists path2) {
-            sendError(ctx, \iFORBIDDEN);
-            return;
-        }
-        String path = assertNotNull(path2);
-
-        File root = File("");
-        variable File file := File(path);
+    
+    String handleGet(HttpExchange x) {
+        File path = uriToFile(x.requestURI);
+        File root = File(".");
+        variable File file := path;
         if (file.hidden || !file.\iexists() || !exists childPath(root, file)) {
-            sendError(ctx, \iNOT_FOUND);
-            return;
+            sendError(x, \iHTTP_NOT_FOUND);
+            return "404 Not Found";
         }
-        
-        Channel ch = e.channel;
-        ChannelFuture writeFuture;
         
         if (file.directory) {
             if (exists index = findIndex(file, indices)) {
                 file := index;
             }
         }
-        if (!file.file) {
+        if (file.directory) {
             if (!file.directory || !list) {
-                sendError(ctx, \iFORBIDDEN);
-                return;
+                sendError(x, \iHTTP_FORBIDDEN);
+                return "403 Forbidden";
             }
             
             value buf = StringBuilder();
@@ -147,177 +82,132 @@ class HttpStaticFileServerHandler(Boolean list, String[]? indices) extends Simpl
             
             buf.append("</body></html>");
             
-            // Build the response object.
-            HttpResponse response = DefaultHttpResponse(\iHTTP_1_1, \iOK);
-            response.content := copiedBuffer(javaString(buf.string), \iUTF_8);
-            response.setHeader(\iCONTENT_TYPE, "text/html; charset=UTF-8");
-    
-            if (isKeepAlive(request)) {
-                // Add 'Content-Length' header only for a keep-alive connection.
-                response.setHeader(\iCONTENT_LENGTH, response.content.readableBytes());
-            }
-            
-            // Write the initial line, header and content.
-            writeFuture = ch.write(response);
+            sendHtmlResponse(x, buf.string);
         } else {
+            String contentType = probeContentType(file.toPath());
+            if (verbose) {
+                sysOut.print("(" contentType ") ");
+            }
             RandomAccessFile raf;
             try {
                 raf = RandomAccessFile(file, "r");
             } catch (FileNotFoundException fnfe) {
-                sendError(ctx, \iNOT_FOUND);
-                return;
+                sendError(x, \iHTTP_NOT_FOUND);
+                return "404 Not Found";
             }
             Integer fileLength = raf.length();
-    
-            HttpResponse response = DefaultHttpResponse(\iHTTP_1_1, \iOK);
-            setContentLength(response, fileLength);
-    
-            // Write the initial line and the header.
-            ch.write(response);
-    
-            // Write the content.
-//            if (ch.pipeline.get(SslHandler.class) != null) {
-//                // Cannot use zero-copy with HTTPS.
-//                writeFuture = ch.write(ChunkedFile(raf, 0, fileLength, 8192));
-//            } else {
-                // No encryption - use zero-copy.
-                FileRegion region =
-                    DefaultFileRegion(raf.channel, 0, fileLength);
-                writeFuture = ch.write(region);
-                writeFuture.addListener(MyChannelFutureProgressListener(region, path));
-//            }
-        }
-        
-        // Decide whether to close the connection or not.
-        if (!isKeepAlive(request)) {
-            // Close the connection when the whole content is written out.
-            writeFuture.addListener(\iCLOSE);
-        }
-    }
 
-    shared actual void exceptionCaught(ChannelHandlerContext? ctx2, ExceptionEvent? e2) {
-        ChannelHandlerContext ctx = assertNotNull<ChannelHandlerContext>(ctx2);
-        ExceptionEvent e = assertNotNull(e2);
-        
-        Channel ch = e.channel;
-        Object cause = e.cause;
-        if (is TooLongFrameException cause) {
-            sendError(ctx, \iBAD_REQUEST);
-            return;
-        }
-
-        if (is Throwable cause) {
-            cause.printStackTrace();
-        }
-        if (ch.connected) {
-            sendError(ctx,  \iINTERNAL_SERVER_ERROR);
-        }
-    }
-
-    String? sanitizeUri(String orgUri) {
-        // Decode the path.
-        variable String uri := orgUri;
-        try {
-            uri := decodeUrl(uri, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
+            Headers headers = x.responseHeaders;
+            headers.set("Content-Type", contentType);
+            x.sendResponseHeaders(200, fileLength);
+            OutputStream os = x.responseBody;
+            
             try {
-                uri := decodeUrl(uri, "ISO-8859-1");
-            } catch (UnsupportedEncodingException e1) {
-                throw Exception();
+                value buf = createByteArray(1024);
+                variable Integer size := raf.read(buf);
+                while (size > 0) {
+                    os.write(buf, 0, size);
+                    size := raf.read(buf);
+                }
+            } finally {
+                os.close();
+                raf.close();
             }
         }
+        return "200 OK";
+    }
 
-        // Convert file separators.
-        uri := uri.replace("/", fileSeparatorChar.string);
+    void sendError(HttpExchange x, Integer status) {
+        sendHtmlResponse(x, wrapHtml("Failure: " status "", "HTTPD Error Page for " status ""), status);
+    }
+    
+    String wrapHtml(String body, String title="HTTPD Page") {
+        return "<html><head><title>" + title + "</title></head><body>" + body + "</body></html>";
+    }
+    
+    void sendHtmlResponse(HttpExchange x, String response, Integer status = \iHTTP_OK) {
+        Headers headers = x.responseHeaders;
+        headers.set("Content-Type", "text/html; charset=UTF-8");
+        x.sendResponseHeaders(status, response.size);
+        OutputStream os = x.responseBody;
+        os.write(javaString(response).getBytes("UTF-8"));
+        os.close();
+    }
 
-        // Simplistic dumb security check.
-        // You will have to do something serious in the production environment.
-        if (uri.contains(fileSeparator + ".") ||
-            uri.contains("." + fileSeparator) ||
-            uri.startsWith(".") || uri.endsWith(".")) {
+    File uriToFile(URI uri) {
+        return File(getSystemProperty("user.dir"), File(uri.path).canonicalPath).canonicalFile;
+    }
+
+    String? childPath(File parent, File child) {
+        String pp = parent.canonicalPath;
+        String cp = child.canonicalPath;
+        if (cp.startsWith(pp)) {
+            return cp.span(pp.size, null);
+        } else {
             return null;
         }
-
-        // Convert to absolute path.
-        return getSystemProperty("user.dir") + fileSeparator + uri;
     }
-
-    void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
-        HttpResponse response = DefaultHttpResponse(\iHTTP_1_1, status);
-        response.setHeader(\iCONTENT_TYPE, "text/plain; charset=UTF-8");
-        response.content := copiedBuffer(
-                javaString("Failure: " + status.string + "\r\n"),
-                \iUTF_8);
-
-        // Close the connection as soon as the error message is sent.
-        ctx.channel.write(response).addListener(\iCLOSE);
+    
+    File? findIndex(File dir, String[]? indices) {
+        if (exists indices) {
+            for (String idx in indices) {
+                File f = File(dir, idx);
+                if (f.\iexists() && f.file) {
+                    return f;
+                }
+            }
+        }
+        return null;
     }
 }
 
-class HttpStaticFileServerPipelineFactory(Boolean list, String[]? indices) satisfies ChannelPipelineFactory {
-    shared actual ChannelPipeline pipeline {
-        // Create a default pipeline implementation.
-        ChannelPipeline pipeline = createPipeline();
-
-        // Uncomment the following line if you want HTTPS
-        //SSLEngine engine = SecureChatSslContextFactory.serverContext.createSSLEngine();
-        //engine.useClientMode := false;
-        //pipeline.addLast("ssl", new SslHandler(engine));
-
-        pipeline.addLast("decoder", HttpRequestDecoder());
-        pipeline.addLast("aggregator", HttpChunkAggregator(65536));
-        pipeline.addLast("encoder", HttpResponseEncoder());
-        pipeline.addLast("chunkedWriter", ChunkedWriteHandler());
-
-        pipeline.addLast("handler", HttpStaticFileServerHandler(list, indices));
-        return pipeline;
+void start(Integer port, Boolean list, String[]? indices, Boolean verbose) {
+    // Create server and bind the port to listen to
+    HttpServer server = createHttpServer(InetSocketAddress(port), 0);
+    server.createContext("/", CeylonHttpHandler(list, indices, verbose));
+    server.executor := null;
+    // Start to accept incoming connections
+    server.start();
+    if (verbose) {
+        sysOut.println("Started server on port " port "");
     }
-}
-
-void start(Integer port, Boolean list, String[]? indices) {
-    // Configure the server.
-    ServerBootstrap bootstrap = ServerBootstrap(
-        NioServerSocketChannelFactory(
-            newCachedThreadPool(),
-            newCachedThreadPool()));
-  
-    // Set up the event pipeline factory.
-    bootstrap.pipelineFactory := HttpStaticFileServerPipelineFactory(list, indices);
-  
-    // Bind and start to accept incoming connections.
-    bootstrap.bind(InetSocketAddress(port));
 }
 
 void run() {
     value opts = Options {
-        usage = "Usage: ceylon org.codejive.ceylon.httpd --port <portnumber> <options>";
+        usage = "Usage: ceylon run org.codejive.ceylon.httpd/1.0.2 -- --port <portnumber> <options>";
         noArgsHelp = "use -h or --help for a list of possible options";
-        Option("help", "-h|--help", "This help"),
+        Option("help", {"h", "help"}, "This help"),
         Option {
             name="port";
-            match="-p|--port=";
+            matches={"p", "port"};
             docs="The port number to run the service on";
             hasValue=true;
             required=true;
         },
         Option {
             name="list";
-            match="-l|--list=";
+            matches={"l", "list"};
             docs="Allows listing of directories";
         },
         Option {
             name="indices";
-            match="-i|--index=";
+            matches={"i", "index"};
             docs="Defines an index file to be served instead of a directory listing";
             hasValue=true;
             multiple=true;
+        },
+        Option {
+            name="verbose";
+            matches={"v", "verbose"};
+            docs="Shows messages about the server's operation";
         }
     };
     
     value res = opts.parse(process.arguments);
     switch(res)
-    case (is OptionsResult) {
-        if (res.options.containsKey("help")) {
+    case (is Options.Result) {
+        if (res.options.defines("help")) {
             opts.printUsage();
             opts.printHelp();
         } else {
@@ -325,14 +215,16 @@ void run() {
             if (exists err) {
                 print(err.messages);
             } else {
-                Integer port = parseInteger(res.options.get("port").first) else 8080;
-                Boolean list = res.options.containsKey("list");
-                String[]? indices = res.options.get("indices");
-                start(port, list, indices);
+                Integer port = parseInteger(res.options["port"]?.first else "8080") else 8080;
+                Boolean list = res.options.defines("list");
+                String[]? indices = res.options["indices"];
+                Boolean verbose = res.options.defines("verbose");
+                start(port, list, indices, verbose);
+                currentThread().join();
             }
         }
     }
-    case (is OptionsError) {
+    case (is Options.Error) {
         print(res.messages);
     }
 }
