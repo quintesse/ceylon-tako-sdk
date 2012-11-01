@@ -7,40 +7,51 @@ shared class Option(
         matches,
         docs,
         hasValue=false,
+        hasOptionalValue=false,
+        defaultOptionalValue="true",
         required=false,
         multiple=false) {
     doc "The name of the option. Can be used to look it up in the result"
     shared String name;
     doc "The list of possible options strings, usually in the form of
-    for example `f` or `file`.
-         
-    There's a distinction between 'short form' options (single letter options)
-    and 'long form' options (more than a single letter, normally entire words);
-    short forms are preceded by a single dash and are case sensitive while long
-    forms are preceded by a double dash and are case insensitive (eg. `-f` and
-    `-F` are different options while `--file` and `--FILE` are the same).
-         
-    If an option has a value it can either be the next argument in the list or
-    it can be appended directly to the option by separating it with an equal sign
-    (eg. you can either write `--file filename.txt` or `--file=filename.txt`)"
+        for example `f` or `file`.
+             
+        There's a distinction between 'short form' options (single letter options)
+        and 'long form' options (more than a single letter, normally entire words);
+        short forms are preceded by a single dash and are case sensitive while long
+        forms are preceded by a double dash and are case insensitive (eg. `-f` and
+        `-F` are different options while `--file` and `--FILE` are the same)."
     shared Sequence<String> matches;
     doc "A description of the option"
     shared String docs;
-    doc "Determines if the option has an associated value"
+    doc "Determines if the option has an associated required value (default `false`).
+         Options with required values are free to use the two forms of
+         specifying a value: as the next argument or appended to
+         the option itself with an equals sign
+         (eg. either `--file filename.txt` or `--file=filename.txt`)"
     shared Boolean hasValue;
-    doc "Determines if the option is required or not"
+    doc "Determines if the option has an associated optional value (default `false`).
+         Options with optional values either have no value at all
+         or they *must* have a value that is appended to the option
+         itself using an equals sign
+         (eg. either `--verbose` or `--verbose=info`)"
+    shared Boolean hasOptionalValue;
+    doc "The value that will be used for an option that required no value
+         or for an optional value that has been left empty (default `\"true\"`)"
+    shared String defaultOptionalValue;
+    doc "Determines if the option is required or not (default `false`)"
     shared Boolean required;
     doc "Determines if the option can have multiple values or not
-    (this means that the option + its value can appear multiple
-    times in the argument list)"
+        (this means that the option + its value can appear multiple
+        times in the argument list, default `false`)"
     shared Boolean multiple;
 }
 
 doc "An easy-to-use parser for command line arguments that takes
-a list of Option classes defining the possible options accepted
-by the parser and returns a OptionsResult containing a map of
-options that were found and their values, as well as the list of
-remaining arguments"
+    a list of Option classes defining the possible options accepted
+    by the parser and returns a OptionsResult containing a map of
+    options that were found and their values, as well as the list of
+    remaining arguments"
 shared class Options(
         usage=null,
         noArgsHelp=null,
@@ -48,9 +59,9 @@ shared class Options(
     doc "Very short text showing how to use the program"
     String? usage;
     doc "Text to show when no arguments are being passed.
-    If specified and no arguments are passed this text will
-    be printed along with the text defined by `usage` and
-    an exit exception will be thrown"
+        If specified and no arguments are passed this text will
+        be printed along with the text defined by `usage` and
+        an exit exception will be thrown"
     shared String? noArgsHelp;
     doc "`Option` objects defining all the available options"
     shared Iterable<Option> options = _options;
@@ -92,9 +103,9 @@ shared class Options(
     }
     
     doc "Parses the passed arguments looking for options and parameters
-    and returns the result into OptionsResult which contains a map of options
-    and the remaining arguments or a OptionsError with error messages if
-    the arguments could not be parsed correctly"
+        and returns the result into OptionsResult which contains a map of options
+        and the remaining arguments or a OptionsError with error messages if
+        the arguments could not be parsed correctly"
     shared Result|Error parse(
             doc "The arguments to parse"
             String[] arguments) {
@@ -123,7 +134,7 @@ shared class Options(
     }
     
     doc "Takes a OptionsResult returned by a previous call to `parse()`
-    and checks it for further errors"
+        and checks it for further errors"
     shared Error? validate(Result result) {
         for (Option opt in options) {
             if (result.options.defines(opt.name)) {
@@ -158,7 +169,10 @@ shared class Options(
                 String matchArg = (match.size == 1) then args.first else args.first.lowercased;
                 variable String? val := null;
                 variable String[]? rest := null;
-                if (opt.hasValue) {
+                if ((!opt.hasValue || opt.hasOptionalValue) && matchArg == actualMatch) {
+                    val := opt.defaultOptionalValue;
+                    rest := args.rest;
+                } else if (opt.hasValue || opt.hasOptionalValue) {
                     String actualMatchJoined = actualMatch + valueSeparator;
                     if (matchArg == actualMatch) {
                         // We have an option of the form "-k value" or "--key value"
@@ -171,11 +185,6 @@ shared class Options(
                     } else if (args.first.startsWith(actualMatchJoined)) {
                         // We have an option of the form "-k=value" or  "--key=value"
                         val := args.first.terminal(args.first.size-actualMatchJoined.size);
-                        rest := args.rest;
-                    }
-                } else {
-                    if (matchArg == actualMatch) {
-                        val := "true";
                         rest := args.rest;
                     }
                 }
