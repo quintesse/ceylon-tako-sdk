@@ -11,13 +11,18 @@ shared class Option(
         multiple=false) {
     doc "The name of the option. Can be used to look it up in the result"
     shared String name;
-    doc "The literal text used to match the option, usually in the form of
-    for example `-f` or `--file`. Multiple possible matches can passed.
-    If an option has a value it is by default assumed to be the next
-    argument in the argument list, but if the matching literal ends with
-    the defined separator (default `=`) the value is assumed to have been
-    appended to the option itself. An example, the option `--file=` would
-    match the argument `--file=filename.txt`"
+    doc "The list of possible options strings, usually in the form of
+    for example `f` or `file`.
+         
+    There's a distinction between 'short form' options (single letter options)
+    and 'long form' options (more than a single letter, normally entire words);
+    short forms are preceded by a single dash and are case sensitive while long
+    forms are preceded by a double dash and are case insensitive (eg. `-f` and
+    `-F` are different options while `--file` and `--FILE` are the same).
+         
+    If an option has a value it can either be the next argument in the list or
+    it can be appended directly to the option by separating it with an equal sign
+    (eg. you can either write `--file filename.txt` or `--file=filename.txt`)"
     shared Sequence<String> matches;
     doc "A description of the option"
     shared String docs;
@@ -149,33 +154,27 @@ shared class Options(
     Error? parseOpt(Result result, Sequence<String> args) {
         for (Option opt in options) {
             for (String match in opt.matches) {
+                String actualMatch = matchString(match);
+                String matchArg = (match.size == 1) then args.first else args.first.lowercased;
                 variable String? val := null;
                 variable String[]? rest := null;
                 if (opt.hasValue) {
-                    if (match.endsWith(valueSeparator)) {
-                        // We have an option of the form "-key=value"
-                        if (args.first.startsWith(match)) {
-                            val := args.first.terminal(args.first.size-match.size);
-                            rest := args.rest;
+                    String actualMatchJoined = actualMatch + valueSeparator;
+                    if (matchArg == actualMatch) {
+                        // We have an option of the form "-k value" or "--key value"
+                        if (nonempty therest=args.rest) {
+                            val := therest.first;
+                            rest := therest.rest;
                         } else {
-                            String m = match.initial(match.size-1);
-                            if (args.first.startsWith(m)) {
-                                return Error("Missing value for option " m "");
-                            }
+                            return Error("Missing value for option " actualMatch "");
                         }
-                    } else {
-                        // We have an option of the form "-key value"
-                        if (args.first == match) {
-                            if (nonempty therest=args.rest) {
-                                val := therest.first;
-                                rest := therest.rest;
-                            } else {
-                                return Error("Missing value for option " match "");
-                            }
-                        }
+                    } else if (args.first.startsWith(actualMatchJoined)) {
+                        // We have an option of the form "-k=value" or  "--key=value"
+                        val := args.first.terminal(args.first.size-actualMatchJoined.size);
+                        rest := args.rest;
                     }
                 } else {
-                    if (args.first == match) {
+                    if (matchArg == actualMatch) {
                         val := "true";
                         rest := args.rest;
                     }
@@ -185,7 +184,7 @@ shared class Options(
                     if (is Error err) {
                         return err;
                     }
-                    result.arguments := rest?{};
+                    result.arguments := rest else {};
                     return null;
                 }
             }
@@ -211,13 +210,21 @@ shared class Options(
     
     String matchesString(Sequence<String> matches) {
         if (matches.size == 1) {
-            return matches.first;
+            return matchString(matches.first);
         } else if (matches.size == 2) {
             assert(nonempty rest=matches.rest);
-            return "" matches.first " or " rest.first "";
+            return matchString(matches.first) + " or " + matchString(rest.first);
         } else {
             assert(nonempty rest=matches.rest);
-            return "" matches.first ", " matchesString(rest) "";
+            return matchString(matches.first) + ", " + matchesString(rest);
+        }
+    }
+    
+    String matchString(String match) {
+        if (match.size == 1) {
+            return optionStart + match;
+        } else {
+            return optionStart + optionStart + match;
         }
     }
 }
