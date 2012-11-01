@@ -8,10 +8,6 @@
 		<buildCommand>
 			<name>com.redhat.ceylon.eclipse.ui.ceylonBuilder</name>
 			<arguments>
-				<dictionary>
-					<key>outputPath</key>
-					<value>/ceylon-tako-sdk/modules</value>
-				</dictionary>
 			</arguments>
 		</buildCommand>
 		<buildCommand>
