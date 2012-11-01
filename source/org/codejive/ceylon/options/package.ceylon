@@ -1,4 +1,2 @@
-Package package {
-    name='org.codejive.ceylon.options';
-    shared=true;
-}
+
+shared package org.codejive.ceylon.options;

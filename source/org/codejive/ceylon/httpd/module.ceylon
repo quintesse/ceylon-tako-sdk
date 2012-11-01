@@ -1,27 +1,13 @@
-Module module {
-    name='org.codejive.ceylon.httpd';
-    version='1.0.0';
-    doc = "A very simple HTTP server";
-    by = { "The Ceylon Team" };
-    license = 'http://www.gnu.org/licenses/gpl.html';
-    dependencies = {
-        Import {
-            name = 'io.netty';
-            version = '3.5.0.Final';
-            optional = false;
-            export = false;
-        },
-        Import {
-            name = 'org.codejive.ceylon.options';
-            version = '0.1';
-            optional = false;
-            export = false;
-        },
-        Import {
-            name = 'ceylon.interop.java';
-            version = '0.3.1';
-            optional = false;
-            export = false;
-        }
-    };
+
+doc "A very simple HTTP server.
+
+Use on the command line like this `ceylon org.codejive.ceylon.httpd --port <portnumber>`"
+by "The Ceylon Team"
+license "ASLv2"
+module org.codejive.ceylon.httpd '1.0.2' {
+    import java.base '7';
+    import oracle.jdk.httpserver '7';
+    import io.netty '3.5.0.Final';
+    import org.codejive.ceylon.options '1.0.0';
+    import ceylon.interop.java '0.3.3';
 }
