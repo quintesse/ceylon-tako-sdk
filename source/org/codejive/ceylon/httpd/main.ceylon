@@ -135,7 +135,12 @@ class CeylonHttpHandler(Boolean list, String[]? indices, Boolean verbose) satisf
     }
 
     File uriToFile(URI uri) {
-        return File(getSystemProperty("user.dir"), File(uri.path).canonicalPath).canonicalFile;
+        File cwd = File(getSystemProperty("user.dir"));
+        File result = File(cwd, uri.path).canonicalFile;
+        if (!result.path.startsWith(cwd.canonicalPath)) {
+            return cwd;
+        }
+        return result;
     }
 
     String? childPath(File parent, File child) {
