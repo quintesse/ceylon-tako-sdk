@@ -37,6 +37,7 @@ class CeylonHttpHandler(Boolean list, String[]? indices, Boolean verbose) satisf
             sendError(x, \iHTTP_INTERNAL_ERROR);
             if (verbose) {
                 sysOut.println("500 Internal Server Error");
+                ex.printStackTrace();
             }
         }
     }
