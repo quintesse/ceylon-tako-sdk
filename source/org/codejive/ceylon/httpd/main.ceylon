@@ -85,7 +85,8 @@ class CeylonHttpHandler(Boolean list, String[]? indices, Boolean verbose) satisf
             
             sendHtmlResponse(x, buf.string);
         } else {
-            String contentType = probeContentType(file.toPath());
+            String? ct = probeContentType(file.toPath());
+            String contentType = ct else "application/octet-stream";
             if (verbose) {
                 sysOut.print("(" contentType ") ");
             }
