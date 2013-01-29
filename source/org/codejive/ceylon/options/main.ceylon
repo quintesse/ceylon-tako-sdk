@@ -55,7 +55,7 @@ doc "An easy-to-use parser for command line arguments that takes
 shared class Options(
         usage=null,
         noArgsHelp=null,
-        Option... _options) {
+        options=[]) {
     doc "Very short text showing how to use the program"
     String? usage;
     doc "Text to show when no arguments are being passed.
@@ -64,7 +64,7 @@ shared class Options(
         an exit exception will be thrown"
     shared String? noArgsHelp;
     doc "`Option` objects defining all the available options"
-    shared Iterable<Option> options = _options;
+    shared Option* options;
     
     String optionStart = "-";
     String valueSeparator = "=";
@@ -113,7 +113,7 @@ shared class Options(
         // a special help message was defined for such a case 
         if (arguments.empty) {
             if (exists noArgsHelp) {
-                return Error("" usage?"" "\n" noArgsHelp "");
+                return Error("" usage else "" "\n" noArgsHelp "");
             }
         }
         
@@ -167,25 +167,25 @@ shared class Options(
             for (String match in opt.matches) {
                 String actualMatch = matchString(match);
                 String matchArg = (match.size == 1) then args.first else args.first.lowercased;
-                variable String? val := null;
-                variable String[]? rest := null;
+                variable String? val = null;
+                variable String[]? rest = null;
                 if ((!opt.hasValue || opt.hasOptionalValue) && matchArg == actualMatch) {
-                    val := opt.defaultOptionalValue;
-                    rest := args.rest;
+                    val = opt.defaultOptionalValue;
+                    rest = args.rest;
                 } else if (opt.hasValue || opt.hasOptionalValue) {
                     String actualMatchJoined = actualMatch + valueSeparator;
                     if (matchArg == actualMatch) {
                         // We have an option of the form "-k value" or "--key value"
                         if (nonempty therest=args.rest) {
-                            val := therest.first;
-                            rest := therest.rest;
+                            val = therest.first;
+                            rest = therest.rest;
                         } else {
                             return Error("Missing value for option " actualMatch "");
                         }
                     } else if (args.first.startsWith(actualMatchJoined)) {
                         // We have an option of the form "-k=value" or  "--key=value"
-                        val := args.first.terminal(args.first.size-actualMatchJoined.size);
-                        rest := args.rest;
+                        val = args.first.terminal(args.first.size-actualMatchJoined.size);
+                        rest = args.rest;
                     }
                 }
                 if (exists v=val) {
@@ -193,7 +193,7 @@ shared class Options(
                     if (is Error err) {
                         return err;
                     }
-                    result.arguments := rest else {};
+                    result.arguments = rest else {};
                     return null;
                 }
             }
@@ -212,7 +212,7 @@ shared class Options(
                 return Error("Multiple values not allowed for option " matchesString(opt.matches) "");
             }
         } else {
-            result.options.put(opt.name, {val});
+            result.options.put(opt.name, [val]);
         }
         return null;
     }

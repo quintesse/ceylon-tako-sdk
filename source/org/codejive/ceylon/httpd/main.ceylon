@@ -14,7 +14,7 @@ import org.codejive.ceylon.options { Options, Option }
 
 import com.sun.net.httpserver { HttpServer { createHttpServer=create }, HttpHandler, HttpExchange, Headers }
 
-class CeylonHttpHandler(Boolean list, String[]? indices, Boolean verbose) satisfies HttpHandler {
+class CeylonHttpHandler(Boolean list, String[] indices, Boolean verbose) satisfies HttpHandler {
     
     shared actual void handle(HttpExchange x) {
         if (x.requestMethod.uppercased != "GET") {
@@ -45,15 +45,15 @@ class CeylonHttpHandler(Boolean list, String[]? indices, Boolean verbose) satisf
     String handleGet(HttpExchange x) {
         File path = uriToFile(x.requestURI);
         File root = File(".");
-        variable File file := path;
-        if (file.hidden || !file.\iexists() || !exists childPath(root, file)) {
+        variable File file = path;
+        if (file.hidden || !file.\iexists() || !childPath(root, file) exists) {
             sendError(x, \iHTTP_NOT_FOUND);
             return "404 Not Found";
         }
         
         if (file.directory) {
             if (exists index = findIndex(file, indices)) {
-                file := index;
+                file = index;
             }
         }
         if (file.directory) {
@@ -106,10 +106,10 @@ class CeylonHttpHandler(Boolean list, String[]? indices, Boolean verbose) satisf
             
             try {
                 value buf = createByteArray(1024);
-                variable Integer size := raf.read(buf);
+                variable Integer size = raf.read(buf);
                 while (size > 0) {
                     os.write(buf, 0, size);
-                    size := raf.read(buf);
+                    size = raf.read(buf);
                 }
             } finally {
                 os.close();
@@ -149,30 +149,24 @@ class CeylonHttpHandler(Boolean list, String[]? indices, Boolean verbose) satisf
         String pp = parent.canonicalPath;
         String cp = child.canonicalPath;
         if (cp.startsWith(pp)) {
-            return cp.span(pp.size, null);
+            return cp.spanFrom(pp.size);
         } else {
             return null;
         }
     }
     
-    File? findIndex(File dir, String[]? indices) {
-        if (exists indices) {
-            for (String idx in indices) {
-                File f = File(dir, idx);
-                if (f.\iexists() && f.file) {
-                    return f;
-                }
-            }
-        }
-        return null;
+    File? findIndex(File dir, String[] indices) {
+        return indices
+            .map((String idx) => File(dir, idx))       // Get the File for each index
+            .find((File f) => f.\iexists() && f.file); // Return it if the file exists
     }
 }
 
-void start(Integer port, Boolean list, String[]? indices, Boolean verbose) {
+void start(Integer port, Boolean list, String[] indices, Boolean verbose) {
     // Create server and bind the port to listen to
     HttpServer server = createHttpServer(InetSocketAddress(port), 0);
     server.createContext("/", CeylonHttpHandler(list, indices, verbose));
-    server.executor := null;
+    server.executor = null;
     // Start to accept incoming connections
     server.start();
     if (verbose) {
@@ -184,31 +178,31 @@ void run() {
     value opts = Options {
         usage = "Usage: ceylon run org.codejive.ceylon.httpd/1.0.2 -- --port <portnumber> <options>";
         noArgsHelp = "use -h or --help for a list of possible options";
-        Option("help", {"h", "help"}, "This help"),
+        options = [ Option("help", ["h", "help"], "This help"),
         Option {
             name="port";
-            matches={"p", "port"};
+            matches=["p", "port"];
             docs="The port number to run the service on";
             hasValue=true;
             required=true;
         },
         Option {
             name="list";
-            matches={"l", "list"};
+            matches=["l", "list"];
             docs="Allows listing of directories";
         },
         Option {
             name="indices";
-            matches={"i", "index"};
+            matches=["i", "index"];
             docs="Defines an index file to be served instead of a directory listing";
             hasValue=true;
             multiple=true;
         },
         Option {
             name="verbose";
-            matches={"v", "verbose"};
+            matches=["v", "verbose"];
             docs="Shows messages about the server's operation";
-        }
+        } ];
     };
     
     value res = opts.parse(process.arguments);
@@ -224,7 +218,7 @@ void run() {
             } else {
                 Integer port = parseInteger(res.options["port"]?.first else "8080") else 8080;
                 Boolean list = res.options.defines("list");
-                String[]? indices = res.options["indices"];
+                String[] indices = res.options["indices"] else {};
                 Boolean verbose = res.options.defines("verbose");
                 start(port, list, indices, verbose);
                 currentThread().join();
