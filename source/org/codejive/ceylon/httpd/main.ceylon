@@ -27,7 +27,7 @@ class CeylonHttpHandler(Boolean list, String[] indices, Boolean verbose) satisfi
         
         try {
             if (verbose) {
-                sysOut.print("GET " x.requestURI " ");
+                sysOut.print("GET ``x.requestURI`` ");
             }
             String result = handleGet(x);
             if (verbose) {
@@ -88,7 +88,7 @@ class CeylonHttpHandler(Boolean list, String[] indices, Boolean verbose) satisfi
             String? ct = probeContentType(file.toPath());
             String contentType = ct else "application/octet-stream";
             if (verbose) {
-                sysOut.print("(" contentType ") ");
+                sysOut.print("(``contentType``) ");
             }
             RandomAccessFile raf;
             try {
@@ -120,7 +120,7 @@ class CeylonHttpHandler(Boolean list, String[] indices, Boolean verbose) satisfi
     }
 
     void sendError(HttpExchange x, Integer status) {
-        sendHtmlResponse(x, wrapHtml("Failure: " status "", "HTTPD Error Page for " status ""), status);
+        sendHtmlResponse(x, wrapHtml("Failure: ``status``", "HTTPD Error Page for ``status``"), status);
     }
     
     String wrapHtml(String body, String title="HTTPD Page") {
@@ -170,7 +170,7 @@ void start(Integer port, Boolean list, String[] indices, Boolean verbose) {
     // Start to accept incoming connections
     server.start();
     if (verbose) {
-        sysOut.println("Started server on port " port "");
+        sysOut.println("Started server on port ``port``");
     }
 }
 

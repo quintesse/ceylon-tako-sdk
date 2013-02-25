@@ -46,19 +46,19 @@ shared class MaxValidator<VAL>(
 // Tests
 void run() {
     value v1 = MinValidator(5, true);
-    print("10 >= 5 " v1.validated(10) "");
-    print("5 >= 5 " v1.validated(5) "");
-    print("4 >= 5 " v1.validated(4) "");
+    print("10 >= 5 ``v1.validated(10)``");
+    print("5 >= 5 ``v1.validated(5)``");
+    print("4 >= 5 ``v1.validated(4)``");
     value v2 = MinValidator(5, false);
-    print("10 > 5 " v2.validated(10) "");
-    print("5 > 5 " v2.validated(5) "");
-    print("4 > 5 " v2.validated(4) "");
+    print("10 > 5 ``v2.validated(10)``");
+    print("5 > 5 ``v2.validated(5)``");
+    print("4 > 5 ``v2.validated(4)``");
     value v3 = MaxValidator(5, true);
-    print("10 <= 5 " v3.validated(10) "");
-    print("5 <= 5 " v3.validated(5) "");
-    print("4 <= 5 " v3.validated(4) "");
+    print("10 <= 5 ``v3.validated(10)``");
+    print("5 <= 5 ``v3.validated(5)``");
+    print("4 <= 5 ``v3.validated(4)``");
     value v4 = MaxValidator(5, false);
-    print("10 < 5 " v4.validated(10) "");
-    print("5 < 5 " v4.validated(5) "");
-    print("4 < 5 " v4.validated(4) "");
+    print("10 < 5 ``v4.validated(10)``");
+    print("5 < 5 ``v4.validated(5)``");
+    print("4 < 5 ``v4.validated(4)``");
 }
