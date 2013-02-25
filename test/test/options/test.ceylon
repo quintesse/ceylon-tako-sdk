@@ -1,10 +1,17 @@
 
 import org.codejive.ceylon.options { ... }
+import ceylon.test { ... }
 
 // Show output on success?
 Boolean verbose = false;
 
 void run() {
+    suite("org.codejive.ceylon.options",
+        "Test all option parsing" -> testRun
+    );
+}
+
+void testRun() {
     value opts = Options {
         usage = "Usage: ceylon acme.doodle <options> <things>";
         noArgsHelp = "use -h or --help for a list of possible options";
@@ -37,8 +44,8 @@ void run() {
         } ];
     };
 
-    void testError(String[] args, String msg) {
-        process.write("---- Testing parse(" args ") -- ");
+    void testError(String[] args, String[] msg) {
+        process.write("---- Testing parse(``args``) -- ");
         try {
             value res = opts.parse(args);
             switch(res)
@@ -52,8 +59,8 @@ void run() {
                         }
                     } else {
                         process.writeLine("FAILED (validation failed with wrong message)");
-                        print("Actual  : " err.messages "");
-                        print("Expected: " msg "");
+                        print("Actual  : ``err.messages``");
+                        print("Expected: ``msg``");
                     }
                 } else {
                     process.writeLine("FAILED (expecting Error got Result)");
@@ -68,8 +75,8 @@ void run() {
                     }
                 } else {
                     process.writeLine("FAILED (wrong message)");
-                    print("Actual  : " res.messages "");
-                    print("Expected: " msg "");
+                    print("Actual  : ``res.messages``");
+                    print("Expected: ``msg``");
                 }
             }
         } catch (Exception ex) {
@@ -94,7 +101,7 @@ void run() {
             return true;
         }
     
-        process.write("---- Testing parse(" args ") -- ");
+        process.write("---- Testing parse(``args``) -- ");
         try {
             value res = opts.parse(args);
             if (is Options.Result res) {
@@ -119,8 +126,8 @@ void run() {
                     }
                 } else {
                     process.writeLine("FAILED");
-                    print("Actual  : " res.options " -- " res.arguments "");
-                    print("Expected: " optmap " -- " rest "");
+                    print("Actual  : ``res.options`` -- ``res.arguments``");
+                    print("Expected: ``optmap`` -- ``rest``");
                 }
             } else {
                 process.writeLine("FAILED (expecting Result got Error)");
@@ -133,13 +140,13 @@ void run() {
     }
 
     // Check help/usage messages
-    testError({}, "Usage: ceylon acme.doodle <options> <things>\nuse -h or --help for a list of possible options");
+    testError({}, ["Usage: ceylon acme.doodle <options> <things>\nuse -h or --help for a list of possible options"]);
     testResult(["-h"], ["help"->["true"]], {});
     testResult(["--help"], ["help"->["true"]], {});
     // Check missing required opts
-    testError(["aap"], "Option -f or --file is required");
-    testError(["-f"], "Missing value for option -f");
-    testError(["--file"], "Missing value for option --file");
+    testError(["aap"], ["Option -f or --file is required"]);
+    testError(["-f"], ["Missing value for option -f"]);
+    testError(["--file"], ["Missing value for option --file"]);
     // Check all short opt forms with required value
     testResult(["-f", "test"], ["file"->["test"]], {});
     testResult(["-f="], ["file"->[""]], {});
@@ -167,21 +174,21 @@ void run() {
     // All kinds of combinations
     testResult(["-f", "test", "noot"], ["file"->["test"]], ["noot"]);
     testResult(["--file", "test", "noot"], ["file"->["test"]], ["noot"]);
-    testError(["--file=test", "-f"], "Missing value for option -f");
+    testError(["--file=test", "-f"], ["Missing value for option -f"]);
     testResult(["--file=test", "-f", "test2"], ["file"->["test", "test2"]], {});
-    testError(["--file=test", "--file"], "Missing value for option --file");
+    testError(["--file=test", "--file"], ["Missing value for option --file"]);
     testResult(["--file=test", "--file="], ["file"->["test", ""]], {});
     testResult(["--file=test", "--file=test2"], ["file"->["test", "test2"]], {});
-    testError(["--file=test", "--file=test2", "-o"], "Missing value for option -o");
+    testError(["--file=test", "--file=test2", "-o"], ["Missing value for option -o"]);
     testResult(["--file=test", "--file=test2", "--out="], ["file"->["test", "test2"], "out"->[""]], {});
     testResult(["--file=test", "--file=test2", "--out=test3"], ["file"->["test", "test2"], "out"->["test3"]], {});
-    testError(["--file=test", "--file=test2", "--out=test3", "--out=test4"], "Multiple values not allowed for option -o or --out");
+    testError(["--file=test", "--file=test2", "--out=test3", "--out=test4"], ["Multiple values not allowed for option -o or --out"]);
     testResult(["--file=test", "--file=test2", "--out=test3", "mies"], ["file"->["test", "test2"], "out"->["test3"]], ["mies"]);
     // Check cases (short opts are case sensitive, long opts are not)
-    testError(["-F", "test"], "Unknown option -F");
+    testError(["-F", "test"], ["Unknown option -F"]);
     testResult(["--FILe", "test"], ["file"->["test"]], {});
     // Check completely unknown option
-    testError(["-x"], "Unknown option -x");
+    testError(["-x"], ["Unknown option -x"]);
     // Check that we don't parse anymore after the first non-opt argument
     testResult(["-f", "test", "noot", "-f", "test", "-x"], ["file"->["test"]], ["noot", "-f", "test", "-x"]);
 }
