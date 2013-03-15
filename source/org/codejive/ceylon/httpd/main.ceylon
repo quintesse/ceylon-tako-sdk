@@ -1,6 +1,6 @@
 
 import java.io { File, OutputStream, RandomAccessFile, FileNotFoundException }
-import java.lang { System { sysOut=\iout, getSystemProperty=getProperty }, Thread { currentThread } }
+import java.lang { System { sysOut=\iout, getSystemProperty=getProperty }, Thread { currentThread }, ByteArray }
 import java.net {
     URI,
     InetSocketAddress,
@@ -8,7 +8,7 @@ import java.net {
 }
 import java.nio.file { Files { probeContentType } }
 
-import ceylon.interop.java { javaString, createByteArray }
+import ceylon.interop.java { javaString }
 
 import org.codejive.ceylon.options { Options, Option }
 
@@ -67,7 +67,7 @@ class CeylonHttpHandler(Boolean list, String[] indices, Boolean verbose) satisfi
             buf.append("<title>Contents of ...</title>");
             buf.append("</head><body>");
             
-            value files = file.listFiles();
+            value files = file.listFiles().array;
             for (File f in files) {
                 String? p = childPath(root, f);
                 if (!f.hidden) {
@@ -105,7 +105,7 @@ class CeylonHttpHandler(Boolean list, String[] indices, Boolean verbose) satisfi
             OutputStream os = x.responseBody;
             
             try {
-                value buf = createByteArray(1024);
+                value buf = ByteArray(1024);
                 variable Integer size = raf.read(buf);
                 while (size > 0) {
                     os.write(buf, 0, size);
