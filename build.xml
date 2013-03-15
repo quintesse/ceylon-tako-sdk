@@ -1,0 +1,129 @@
+<project name="Tako's Ceylon SDK" basedir="." default="test">
+
+    <property file="build.properties" />
+    <property name="ceylon.verbosity" value="false"/>
+    <property name="ceylon.executable" value="${basedir}/../ceylon-dist/dist/bin/ceylon"/>
+    <property name="out.repo" location="modules"/>
+    <property name="test.repo" location="modules"/>
+
+    <!-- Local repository -->
+    <property name="ceylon.repo.dir" location="${user.home}/.ceylon/repo" />
+    
+    <path id="ant-tasks">
+        <pathelement location="${ceylon.ant.lib}"/>
+    </path>
+    
+    <typedef resource="com/redhat/ceylon/ant/antlib.xml" classpathref="ant-tasks"/>
+
+    <reposet id="reposet.compile.test">
+        <repo url="${out.repo}"/>
+    </reposet>
+    
+    <reposet id="reposet.run.test">
+        <reposet refid="reposet.compile.test"/>
+        <repo url="${test.repo}"/>
+    </reposet>
+    
+    <moduleset id="modules.sdk.jvm">
+        <module name="org.codejive.ceylon.options"/>
+        <module name="org.codejive.ceylon.httpd"/>
+    </moduleset>
+    
+    <moduleset id="modules.sdk.js">
+        <module name="org.codejive.ceylon.options"/>
+    </moduleset>
+    
+    <moduleset id="modules.test.jvm">
+        <module name="test.options"/>
+    </moduleset>
+    
+    <moduleset id="modules.test.js">
+        <module name="test.options"/>
+    </moduleset>
+    
+    <target name="clean"
+        description="Deletes the test-modules and modules directories">
+        <delete dir="${out.repo}"/>
+        <delete dir="${test.repo}"/>
+    </target>
+    
+    <target name="compile-jvm">
+        <ceylon-compile executable="${ceylon.executable}"
+            encoding="UTF-8"
+            verbose="${ceylon.verbosity}">
+            <moduleset refid="modules.sdk.jvm"/>
+        </ceylon-compile>
+    </target>
+
+    <target name="compile-js">
+        <ceylon-compile-js executable="${ceylon.executable}"
+            encoding="UTF-8"
+            verbose="${ceylon.verbosity}">
+            <moduleset refid="modules.sdk.js"/>
+        </ceylon-compile-js>
+    </target>
+    
+    <target name="compile" depends="compile-jvm,compile-js"
+            description="Compiles the SDK modules to the 'modules' repository" />
+
+    <target name="compile-test-jvm" depends="compile-jvm">
+        <ceylon-compile executable="${ceylon.executable}"
+            src="test"
+            out="${test.repo}"
+            encoding="UTF-8"
+            verbose="${ceylon.verbosity}">
+            <reposet refid="reposet.compile.test"/> 
+            <moduleset refid="modules.test.jvm"/>
+        </ceylon-compile>
+    </target>
+
+    <target name="compile-test-js" depends="compile-js">
+        <ceylon-compile-js executable="${ceylon.executable}"
+            src="test"
+            out="${test.repo}"
+            encoding="UTF-8"
+            verbose="${ceylon.verbosity}">
+            <reposet refid="reposet.compile.test"/>
+            <moduleset refid="modules.test.js"/>
+        </ceylon-compile-js>
+    </target>
+            
+    <target name="compile-test" depends="compile,compile-test-jvm,compile-test-js"
+        description="Compiles the test modules to the 'test-modules' repository" />
+
+    <target name="test-jvm" depends="compile-test-jvm"
+        description="Runs the compiled test modules from the 'test-modules' repository">
+        <ceylon-run
+            module="test.options/1.3.0"
+            run="test.options.run"
+            executable="${ceylon.executable}">
+            <reposet refid="reposet.run.test"/>
+        </ceylon-run>
+    </target>
+
+    <target name="test-js" depends="compile-test-js">
+        <!-- TODO support verbose attr on ceylon-run command -->
+        <!-- TODO run the js tests -->
+    </target>
+
+    <target name="test" depends="compile-test,test-jvm,test-js"
+        description="Runs the compiled test modules from the 'test-modules' repository" />
+
+    <target name="doc" 
+            description="Documents the SDK modules to the 'modules' repository">
+        <ceylon-doc executable="${ceylon.executable}">
+            <moduleset refid="modules.sdk.jvm"/>
+        </ceylon-doc>
+    </target>
+
+    <target name="publish" depends="compile"
+            description="Copies the SDK modules to the user's repository">
+        <copy todir="${ceylon.repo.dir}" overwrite="true">
+            <fileset dir="${out.repo}">
+                <include name="ceylon/config/**"/>
+                <include name="org/codejive/ceylon/options/**"/>
+                <include name="org/codejive/ceylon/httpd/**"/>
+            </fileset>
+        </copy>
+    </target>
+</project>
