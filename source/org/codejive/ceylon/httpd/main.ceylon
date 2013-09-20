@@ -176,7 +176,7 @@ void start(Integer port, Boolean list, String[] indices, Boolean verbose) {
 
 void run() {
     value opts = Options {
-        usage = "Usage: ceylon run org.codejive.ceylon.httpd/1.0.2 -- --port <portnumber> <options>";
+        usage = "Usage: ceylon run org.codejive.ceylon.httpd/1.2.0 -- --port <portnumber> <options>";
         noArgsHelp = "use -h or --help for a list of possible options";
         options = [ Option("help", ["h", "help"], "This help"),
         Option {
