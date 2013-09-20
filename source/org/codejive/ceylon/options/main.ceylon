@@ -1,7 +1,7 @@
 
 import ceylon.collection { HashMap }
 
-doc "Defines a single command line option"
+"Defines a single command line option"
 shared class Option(
         name,
         matches,
@@ -11,70 +11,70 @@ shared class Option(
         defaultOptionalValue="true",
         required=false,
         multiple=false) {
-    doc "The name of the option. Can be used to look it up in the result"
+    "The name of the option. Can be used to look it up in the result"
     shared String name;
-    doc "The list of possible options strings, usually in the form of
-         for example `f` or `file`.
-             
-         There's a distinction between 'short form' options (single letter options)
-         and 'long form' options (more than a single letter, normally entire words);
-         short forms are preceded by a single dash and are case sensitive while long
-         forms are preceded by a double dash and are case insensitive (eg. `-f` and
-         `-F` are different options while `--file` and `--FILE` are the same)."
+    "The list of possible options strings, usually in the form of
+     for example `f` or `file`.
+         
+     There's a distinction between 'short form' options (single letter options)
+     and 'long form' options (more than a single letter, normally entire words);
+     short forms are preceded by a single dash and are case sensitive while long
+     forms are preceded by a double dash and are case insensitive (eg. `-f` and
+     `-F` are different options while `--file` and `--FILE` are the same)."
     shared Sequence<String> matches;
-    doc "A description of the option"
+    "A description of the option"
     shared String docs;
-    doc "Determines if the option has an associated required value (default `false`).
-         Options with required values are free to use the two forms of
-         specifying a value: as the next argument or appended to
-         the option itself with an equals sign
-         (eg. either `--file filename.txt` or `--file=filename.txt`)"
+    "Determines if the option has an associated required value (default `false`).
+     Options with required values are free to use the two forms of
+     specifying a value: as the next argument or appended to
+     the option itself with an equals sign
+     (eg. either `--file filename.txt` or `--file=filename.txt`)"
     shared Boolean hasValue;
-    doc "Determines if the option has an associated optional value (default `false`).
-         Options with optional values either have no value at all
-         or they *must* have a value that is appended to the option
-         itself using an equals sign
-         (eg. either `--verbose` or `--verbose=info`)"
+    "Determines if the option has an associated optional value (default `false`).
+     Options with optional values either have no value at all
+     or they *must* have a value that is appended to the option
+     itself using an equals sign
+     (eg. either `--verbose` or `--verbose=info`)"
     shared Boolean hasOptionalValue;
-    doc "The value that will be used for an option that required no value
-         or for an optional value that has been left empty (default `\"true\"`)"
+    "The value that will be used for an option that required no value
+     or for an optional value that has been left empty (default `\"true\"`)"
     shared String defaultOptionalValue;
-    doc "Determines if the option is required or not (default `false`)"
+    "Determines if the option is required or not (default `false`)"
     shared Boolean required;
-    doc "Determines if the option can have multiple values or not
+    "Determines if the option can have multiple values or not
          (this means that the option + its value can appear multiple
          times in the argument list, default `false`)"
     shared Boolean multiple;
 }
 
-doc "An easy-to-use parser for command line arguments that takes
-     a list of [[Option]] classes defining the possible options accepted
-     by the parser and returns a [[OptionsResult]] containing a map of
-     options that were found and their values, as well as the list of
-     remaining arguments. Or in the case of an error it will return an
-     [[Error]] containing a list of problem descriptions."
+"An easy-to-use parser for command line arguments that takes
+ a list of [[Option]] classes defining the possible options accepted
+ by the parser and returns a [[OptionsResult]] containing a map of
+ options that were found and their values, as well as the list of
+ remaining arguments. Or in the case of an error it will return an
+ [[Error]] containing a list of problem descriptions."
 shared class Options(
         usage=null,
         noArgsHelp=null,
         options=[]) {
-    doc "Very short text showing how to use the program"
+    "Very short text showing how to use the program"
     String? usage;
-    doc "Text to show when no arguments are being passed.
-         If specified and no arguments are passed this text will
-         be printed along with the text defined by `usage` and
-         an exit exception will be thrown"
+    "Text to show when no arguments are being passed.
+     If specified and no arguments are passed this text will
+     be printed along with the text defined by `usage` and
+     an exit exception will be thrown"
     shared String? noArgsHelp;
-    doc "`Option` objects defining all the available options"
+    "`Option` objects defining all the available options"
     shared Option* options;
     
     String optionStart = "-";
     String valueSeparator = "=";
 
-    doc "The result returned by a successful invocation of the `Options.parse()` method"
+    "The result returned by a successful invocation of the `Options.parse()` method"
     shared abstract class Result() {
-        doc "The options that have been found in the argument list"
+        "The options that have been found in the argument list"
         shared formal Map<String, Sequence<String>> options;
-        doc "The remaining arguments that are not options"
+        "The remaining arguments that are not options"
         shared formal variable String[] arguments;
         shared actual String string {
             return "Result(``options``, ``arguments``)";
@@ -86,7 +86,7 @@ shared class Options(
         shared actual variable String[] arguments;
     }
     
-    doc "The result returned by an unsuccessful invocation of the `Options.parse()` method"
+    "The result returned by an unsuccessful invocation of the `Options.parse()` method"
     shared abstract class Error() {
         shared formal String[] messages;
         shared actual String string {
@@ -94,8 +94,8 @@ shared class Options(
         }
     }
     
-    doc "The result returned by an unsuccessful invocation of the `Options.parse()` method"
-    shared class InternalError(String? initialMessage) extends Error() {
+    "The result returned by an unsuccessful invocation of the `Options.parse()` method"
+    class InternalError(String? initialMessage) extends Error() {
         value msgs = SequenceBuilder<String>();
         
         if (exists initialMessage) {
@@ -110,12 +110,12 @@ shared class Options(
         }
     }
     
-    doc "Parses the passed arguments looking for options and parameters
-         and returns the result into OptionsResult which contains a map of options
-         and the remaining arguments or a OptionsError with error messages if
-         the arguments could not be parsed correctly"
+    "Parses the passed arguments looking for options and parameters
+     and returns the result into OptionsResult which contains a map of options
+     and the remaining arguments or a OptionsError with error messages if
+     the arguments could not be parsed correctly"
     shared Result|Error parse(
-            doc "The arguments to parse"
+            "The arguments to parse"
             String[] arguments) {
         // Show a special message if no parameters are passed and
         // a special help message was defined for such a case 
@@ -141,8 +141,8 @@ shared class Options(
         return result;
     }
     
-    doc "Takes a OptionsResult returned by a previous call to `parse()`
-         and checks it for further errors"
+    "Takes a OptionsResult returned by a previous call to `parse()`
+     and checks it for further errors"
     shared Error? validate(Result result) {
         for (Option opt in options) {
             if (result.options.defines(opt.name)) {
@@ -156,14 +156,14 @@ shared class Options(
         return null;
     }
     
-    doc "Print usage text"
+    "Print usage text"
     shared void printUsage() {
         if (exists usage) {
             print(usage);
         }
     }
     
-    doc "Print help text for all options"
+    "Print help text for all options"
     shared void printHelp() {
         for (Option opt in options) {
             print("    ``matchesString(opt.matches)``\t\t``opt.docs``");

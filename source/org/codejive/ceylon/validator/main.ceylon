@@ -1,15 +1,15 @@
 
-doc "Base interface that must be implemented by all validators"
+"Base interface that must be implemented by all validators"
 shared interface Validator<VAL> {
-    doc "Determines if the value being passed is valid according to the rules set by the validator"
+    "Determines if the value being passed is valid according to the rules set by the validator"
     shared formal Boolean validated(VAL val);
 }
 
-doc "A validator that checks a value against a sepecified minimum"
+"A validator that checks a value against a sepecified minimum"
 shared class MinValidator<VAL>(
-            doc "The minimum value to validate against"
+            "The minimum value to validate against"
             VAL constraint,
-            doc "Determines if the constraint value itself is valid or not"
+            "Determines if the constraint value itself is valid or not"
             Boolean inclusive/*=true*/)
         satisfies Validator<VAL>
         given VAL satisfies Comparable<VAL> {
@@ -24,11 +24,11 @@ shared class MinValidator<VAL>(
 
 }
 
-doc "A validator that checks a value against a sepecified maximum"
+"A validator that checks a value against a sepecified maximum"
 shared class MaxValidator<VAL>(
-            doc "The maximum value to validate against"
+            "The maximum value to validate against"
             VAL constraint,
-            doc "Determines if the constraint value itself is valid or not"
+            "Determines if the constraint value itself is valid or not"
             Boolean inclusive/*=true*/)
         satisfies Validator<VAL>
         given VAL satisfies Comparable<VAL> {
