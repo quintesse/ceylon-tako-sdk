@@ -67,8 +67,9 @@ class CeylonHttpHandler(Boolean list, String[] indices, Boolean verbose) satisfi
             buf.append("<title>Contents of ...</title>");
             buf.append("</head><body>");
             
-            value files = file.listFiles().array;
-            for (File f in files) {
+            value files = file.listFiles().iterable;
+            for (File? f in files) {
+                assert (exists f);
                 String? p = childPath(root, f);
                 if (!f.hidden) {
                     if (exists p) {
@@ -176,7 +177,7 @@ void start(Integer port, Boolean list, String[] indices, Boolean verbose) {
 
 void run() {
     value opts = Options {
-        usage = "Usage: ceylon run org.codejive.ceylon.httpd/1.2.0 -- --port <portnumber> <options>";
+        usage = "Usage: ceylon run org.codejive.ceylon.httpd/1.2.2 -- --port <portnumber> <options>";
         noArgsHelp = "use -h or --help for a list of possible options";
         options = [ Option("help", ["h", "help"], "This help"),
         Option {
@@ -218,7 +219,7 @@ void run() {
             } else {
                 Integer port = parseInteger(res.options["port"]?.first else "8080") else 8080;
                 Boolean list = res.options.defines("list");
-                String[] indices = res.options["indices"] else {};
+                String[] indices = res.options["indices"] else [];
                 Boolean verbose = res.options.defines("verbose");
                 start(port, list, indices, verbose);
                 currentThread().join();

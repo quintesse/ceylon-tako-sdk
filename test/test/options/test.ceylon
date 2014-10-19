@@ -5,13 +5,7 @@ import ceylon.test { ... }
 // Show output on success?
 Boolean verbose = false;
 
-void run() {
-    suite("org.codejive.ceylon.options",
-        "Test all option parsing" -> testRun
-    );
-}
-
-void testRun() {
+shared test void testRun() {
     value opts = Options {
         usage = "Usage: ceylon acme.doodle <options> <things>";
         noArgsHelp = "use -h or --help for a list of possible options";
@@ -140,53 +134,53 @@ void testRun() {
     }
 
     // Check help/usage messages
-    testError({}, ["Usage: ceylon acme.doodle <options> <things>\nuse -h or --help for a list of possible options"]);
-    testResult(["-h"], ["help"->["true"]], {});
-    testResult(["--help"], ["help"->["true"]], {});
+    testError([], ["Usage: ceylon acme.doodle <options> <things>\nuse -h or --help for a list of possible options"]);
+    testResult(["-h"], ["help"->["true"]], []);
+    testResult(["--help"], ["help"->["true"]], []);
     // Check missing required opts
     testError(["aap"], ["Option -f or --file is required"]);
     testError(["-f"], ["Missing value for option -f"]);
     testError(["--file"], ["Missing value for option --file"]);
     // Check all short opt forms with required value
-    testResult(["-f", "test"], ["file"->["test"]], {});
-    testResult(["-f="], ["file"->[""]], {});
-    testResult(["-f=test"], ["file"->["test"]], {});
+    testResult(["-f", "test"], ["file"->["test"]], []);
+    testResult(["-f="], ["file"->[""]], []);
+    testResult(["-f=test"], ["file"->["test"]], []);
     // Check all long opt forms with required value
-    testResult(["--file", "test"], ["file"->["test"]], {});
-    testResult(["--file="], ["file"->[""]], {});
-    testResult(["--file=test"], ["file"->["test"]], {});
+    testResult(["--file", "test"], ["file"->["test"]], []);
+    testResult(["--file="], ["file"->[""]], []);
+    testResult(["--file=test"], ["file"->["test"]], []);
     // Check short flag forms
-    testResult(["-f=test", "-d"], ["file"->["test"], "debug"->["true"]], {});
+    testResult(["-f=test", "-d"], ["file"->["test"], "debug"->["true"]], []);
     testResult(["-f=test", "-d", "test"], ["file"->["test"], "debug"->["true"]], ["test"]);
     // Check long flag forms
-    testResult(["-f=test", "--debug"], ["file"->["test"], "debug"->["true"]], {});
+    testResult(["-f=test", "--debug"], ["file"->["test"], "debug"->["true"]], []);
     testResult(["-f=test", "--debug", "test"], ["file"->["test"], "debug"->["true"]], ["test"]);
     // Check all short opt forms with optional value
-    testResult(["-f=test", "-v"], ["file"->["test"], "logging"->["all"]], {});
-    testResult(["-f=test", "-v="], ["file"->["test"], "logging"->[""]], {});
-    testResult(["-f=test", "-v=foo"], ["file"->["test"], "logging"->["foo"]], {});
+    testResult(["-f=test", "-v"], ["file"->["test"], "logging"->["all"]], []);
+    testResult(["-f=test", "-v="], ["file"->["test"], "logging"->[""]], []);
+    testResult(["-f=test", "-v=foo"], ["file"->["test"], "logging"->["foo"]], []);
     testResult(["-f=test", "-v", "foo"], ["file"->["test"], "logging"->["all"]], ["foo"]);
     // Check all long opt forms with optional value
-    testResult(["-f=test", "--verbose"], ["file"->["test"], "logging"->["all"]], {});
-    testResult(["-f=test", "--verbose="], ["file"->["test"], "logging"->[""]], {});
-    testResult(["-f=test", "--verbose=foo"], ["file"->["test"], "logging"->["foo"]], {});
+    testResult(["-f=test", "--verbose"], ["file"->["test"], "logging"->["all"]], []);
+    testResult(["-f=test", "--verbose="], ["file"->["test"], "logging"->[""]], []);
+    testResult(["-f=test", "--verbose=foo"], ["file"->["test"], "logging"->["foo"]], []);
     testResult(["-f=test", "--verbose", "foo"], ["file"->["test"], "logging"->["all"]], ["foo"]);
     // All kinds of combinations
     testResult(["-f", "test", "noot"], ["file"->["test"]], ["noot"]);
     testResult(["--file", "test", "noot"], ["file"->["test"]], ["noot"]);
     testError(["--file=test", "-f"], ["Missing value for option -f"]);
-    testResult(["--file=test", "-f", "test2"], ["file"->["test", "test2"]], {});
+    testResult(["--file=test", "-f", "test2"], ["file"->["test", "test2"]], []);
     testError(["--file=test", "--file"], ["Missing value for option --file"]);
-    testResult(["--file=test", "--file="], ["file"->["test", ""]], {});
-    testResult(["--file=test", "--file=test2"], ["file"->["test", "test2"]], {});
+    testResult(["--file=test", "--file="], ["file"->["test", ""]], []);
+    testResult(["--file=test", "--file=test2"], ["file"->["test", "test2"]], []);
     testError(["--file=test", "--file=test2", "-o"], ["Missing value for option -o"]);
-    testResult(["--file=test", "--file=test2", "--out="], ["file"->["test", "test2"], "out"->[""]], {});
-    testResult(["--file=test", "--file=test2", "--out=test3"], ["file"->["test", "test2"], "out"->["test3"]], {});
+    testResult(["--file=test", "--file=test2", "--out="], ["file"->["test", "test2"], "out"->[""]], []);
+    testResult(["--file=test", "--file=test2", "--out=test3"], ["file"->["test", "test2"], "out"->["test3"]], []);
     testError(["--file=test", "--file=test2", "--out=test3", "--out=test4"], ["Multiple values not allowed for option -o or --out"]);
     testResult(["--file=test", "--file=test2", "--out=test3", "mies"], ["file"->["test", "test2"], "out"->["test3"]], ["mies"]);
     // Check cases (short opts are case sensitive, long opts are not)
     testError(["-F", "test"], ["Unknown option -F"]);
-    testResult(["--FILe", "test"], ["file"->["test"]], {});
+    testResult(["--FILe", "test"], ["file"->["test"]], []);
     // Check completely unknown option
     testError(["-x"], ["Unknown option -x"]);
     // Check that we don't parse anymore after the first non-opt argument

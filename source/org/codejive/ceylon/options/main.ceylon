@@ -1,5 +1,5 @@
 
-import ceylon.collection { HashMap }
+import ceylon.collection { ArrayList, HashMap }
 
 "Defines a single command line option"
 shared class Option(
@@ -49,7 +49,7 @@ shared class Option(
 
 "An easy-to-use parser for command line arguments that takes
  a list of [[Option]] classes defining the possible options accepted
- by the parser and returns a [[OptionsResult]] containing a map of
+ by the parser and returns a [[Result]] containing a map of
  options that were found and their values, as well as the list of
  remaining arguments. Or in the case of an error it will return an
  [[Error]] containing a list of problem descriptions."
@@ -96,17 +96,17 @@ shared class Options(
     
     "The result returned by an unsuccessful invocation of the `Options.parse()` method"
     class InternalError(String? initialMessage) extends Error() {
-        value msgs = SequenceBuilder<String>();
+        value msgs = ArrayList<String>();
         
         if (exists initialMessage) {
-            msgs.append(initialMessage);
+            msgs.add(initialMessage);
         }
         
         shared void append(String message) {
-            msgs.append(message);
+            msgs.add(message);
         }
         shared actual String[] messages {
-            return msgs.sequence;
+            return msgs.sequence();
         }
     }
     
@@ -201,7 +201,7 @@ shared class Options(
                     if (is Error err) {
                         return err;
                     }
-                    result.arguments = rest else {};
+                    result.arguments = rest else [];
                     return null;
                 }
             }
@@ -213,9 +213,7 @@ shared class Options(
         value curr = result.options[opt.name];
         if (exists curr) {
             if (opt.multiple) {
-                value b = SequenceAppender<String>(curr);
-                b.append(val);
-                result.options.put(opt.name, b.sequence);
+                result.options.put(opt.name, curr.append([val]));
             } else {
                 return InternalError("Multiple values not allowed for option ``matchesString(opt.matches)``");
             }
