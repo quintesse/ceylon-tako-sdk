@@ -2,7 +2,7 @@
 import ceylon.collection { ArrayList, HashMap }
 
 "Defines a single command line option"
-shared class Option(
+shared class Optiony(
         name,
         matches,
         docs,
@@ -65,7 +65,7 @@ shared class Options(
      an exit exception will be thrown"
     shared String? noArgsHelp;
     "`Option` objects defining all the available options"
-    shared Option* options;
+    shared Optiony* options;
     
     String optionStart = "-";
     String valueSeparator = "=";
@@ -144,7 +144,7 @@ shared class Options(
     "Takes a OptionsResult returned by a previous call to `parse()`
      and checks it for further errors"
     shared Error? validate(Result result) {
-        for (Option opt in options) {
+        for (Optiony opt in options) {
             if (result.options.defines(opt.name)) {
             } else {
                 if (opt.required) {
@@ -165,13 +165,13 @@ shared class Options(
     
     "Print help text for all options"
     shared void printHelp() {
-        for (Option opt in options) {
+        for (Optiony opt in options) {
             print("    ``matchesString(opt.matches)``\t\t``opt.docs``");
         }
     }
     
     Error? parseOpt(InternalResult result, Sequence<String> args) {
-        for (Option opt in options) {
+        for (Optiony opt in options) {
             for (String match in opt.matches) {
                 String actualMatch = matchString(match);
                 String matchArg = (match.size == 1) then args.first else args.first.lowercased;
@@ -209,7 +209,7 @@ shared class Options(
         return InternalError("Unknown option ``args.first``");
     }
     
-    Error? setOpt(InternalResult result, Option opt, String val) {
+    Error? setOpt(InternalResult result, Optiony opt, String val) {
         value curr = result.options[opt.name];
         if (exists curr) {
             if (opt.multiple) {

@@ -10,7 +10,7 @@ import java.nio.file { Files { probeContentType } }
 
 import ceylon.interop.java { javaString }
 
-import org.codejive.ceylon.options { Options, Option }
+import org.codejive.ceylon.options { Options, Optiony }
 
 import com.sun.net.httpserver { HttpServer { createHttpServer=create }, HttpHandler, HttpExchange, Headers }
 
@@ -179,27 +179,27 @@ void run() {
     value opts = Options {
         usage = "Usage: ceylon run org.codejive.ceylon.httpd/1.2.2 -- --port <portnumber> <options>";
         noArgsHelp = "use -h or --help for a list of possible options";
-        options = [ Option("help", ["h", "help"], "This help"),
-        Option {
+        options = [ Optiony("help", ["h", "help"], "This help"),
+        Optiony {
             name="port";
             matches=["p", "port"];
             docs="The port number to run the service on";
             hasValue=true;
             required=true;
         },
-        Option {
+        Optiony {
             name="list";
             matches=["l", "list"];
             docs="Allows listing of directories";
         },
-        Option {
+        Optiony {
             name="indices";
             matches=["i", "index"];
             docs="Defines an index file to be served instead of a directory listing";
             hasValue=true;
             multiple=true;
         },
-        Option {
+        Optiony {
             name="verbose";
             matches=["v", "verbose"];
             docs="Shows messages about the server's operation";
