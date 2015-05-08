@@ -10,3 +10,5 @@ JDTClasses/
 *.jar
 *.war
 *.ear
+/.exploded/
+/bin/
