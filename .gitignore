@@ -3,6 +3,7 @@ target/
 modules/
 .settings/
 JDTClasses/
+.ceylon/config.old
 
 *.class
 
