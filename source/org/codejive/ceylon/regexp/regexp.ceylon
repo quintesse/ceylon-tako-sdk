@@ -18,26 +18,17 @@
  for the current backend. See the documentation for the `RegExp`
  object itself for more information.
  "
-shared native RegExp regExp(
+shared native RegExp regexp(
         "The regular expression to be used for all operations"
         String expression,
         "Flags to change the default behaviour"
         RegExpFlag* flags);
 
 shared interface RegExpFlag
-        of global, ignoreCase, multiLine { }
+        of global | ignoreCase | multiLine { }
 shared object global satisfies RegExpFlag {}
 shared object ignoreCase satisfies RegExpFlag {}
 shared object multiLine satisfies RegExpFlag {}
-
-"""This method produces a `String` that can be used to create a
-   `RegExp` that would match the string as if it were a literal
-   pattern. Metacharacters or escape sequences in the input sequence
-   will be given no special meaning.
-   """
-shared native String quote(
-    "The string to be literalized"
-    String input);
 
 """A class for cross-platform regular expressions modeled on Javascript's
    `RegExp`, plus some extra methods like Java's and Javascript `String`'s
@@ -64,6 +55,8 @@ shared sealed abstract class RegExp(expression, flags) {
     "Flags to change the default behaviour"
     RegExpFlag* flags;
     
+    shared formal variable Integer lastIndex;
+    
     shared formal Boolean global;
     shared formal Boolean ignoreCase;
     shared formal Boolean multiLine;
@@ -80,9 +73,22 @@ shared sealed abstract class RegExp(expression, flags) {
        of [[match result|MatchResult]] containing all matches, or [[Empty]]
        if there was no match.
        """
-    shared formal MatchResult[] findAll(
-            "the string to apply the regular expression to"
-            String input);
+    shared default MatchResult[] findAll(
+        String input) {
+        if (global) {
+            variable MatchResult[] results = [];
+            variable MatchResult? result = find(input);
+            while (exists r=result) {
+                results = results.withTrailing(r);
+                result = find(input);
+            }
+            return results;
+        } else {
+            // We need the [[package.global]] flag for this to work
+            // so we just delegate to a temporary `RegExp`
+            return regexp(expression, package.global, *flags).findAll(input);
+        }
+    }
     
     """Splits the input string around matches of the regular expression. If the
        regular expression is completely empty, splits the input string into its
@@ -109,7 +115,9 @@ shared sealed abstract class RegExp(expression, flags) {
      * @param input the string to apply the regular expression to
      * @return whether the regular expression matches the given string.
      */
-    shared formal Boolean test(String input);
+    shared default Boolean test(String input) {
+        return find(input) exists;
+    }
     
     """Returns the input string with the part(s) matching the regular expression
        replaced with the replacement string. If the global flag is set, replaces
@@ -149,3 +157,44 @@ shared class MatchResult(start, end, matched, groups) {
 
 shared class RegExpException(String? description=null, Throwable? cause=null)
         extends Exception(description, cause) {}
+
+"""This method produces a `String` that can be used to create a
+   `RegExp` that would match the string as if it were a literal
+   pattern. Metacharacters or escape sequences in the input sequence
+   will be given no special meaning.
+   """
+shared String quote(
+    "The string to be literalized"
+    String input) {
+    StringBuilder sb = StringBuilder();
+    for (ch in input) {
+        if (ch in """\^$*+?.()|[]{}""") {
+            sb.append("\\");
+        }
+        sb.append(ch.string);
+    }
+    return sb.string;
+}
+
+/****************
+ ***** JVM ******
+ ****************/
+
+native("jvm")
+shared RegExp regexp(
+    String expression,
+    RegExpFlag* flags) {
+    return RegExpJava(expression, *flags);
+}
+
+/****************
+ ***** JS *******
+ ****************/
+
+native("js")
+shared RegExp regexp(
+    String expression,
+    RegExpFlag* flags) {
+    return RegExpJavascript(expression, *flags);
+}
+

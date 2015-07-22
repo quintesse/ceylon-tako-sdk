@@ -17,28 +17,10 @@
 import java.util.regex { Pattern, Matcher }
 import ceylon.interop.java { javaString }
 
-"Factory method that returns an initialized [[RegExp]] object
- for the current backend. See the documentation for the `RegExp`
- object itself for more information.
- "
-native("jvm")
-shared RegExp regExp(
-        "The regular expression to be used for all operations"
-        String expression,
-        "Flags to change the default behaviour"
-        RegExpFlag* flags) {
-    return RegExpJava(expression, *flags);
-}
-
-native("jvm")
-shared String quote(String input) {
-    return Pattern.quote(input);
-}
-
 native("jvm")
 class RegExpJava(String expression, RegExpFlag* flags)
         extends RegExp(expression, *flags) {
-    shared variable Integer lastIndex = 0;
+    shared actual variable Integer lastIndex = 0;
     
     Integer patternFlags {
         variable Integer f = Pattern.\iUNIX_LINES;
@@ -70,7 +52,7 @@ class RegExpJava(String expression, RegExpFlag* flags)
             Matcher? matcher = pattern.matcher(javaString(input));
             if (exists m=matcher, m.find(searchStartIndex)) {
                 Integer groupCount = m.groupCount();
-                Array<String> groups = Array<String>.OfSize(1 + groupCount, "");
+                Array<String> groups = Array<String>.ofSize(1 + groupCount, "");
                 for (value group in 0 : groupCount+1) {
                     groups.set(group, m.group(group));
                 }
@@ -88,23 +70,6 @@ class RegExpJava(String expression, RegExpFlag* flags)
         return null;
     }
     
-    shared actual MatchResult[] findAll(
-        String input) {
-        if (global) {
-            variable MatchResult[] results = [];
-            variable MatchResult? result = find(input);
-            while (exists r=result) {
-                results = results.withTrailing(r);
-                result = find(input);
-            }
-            return results;
-        } else {
-            // We need the [[package.global]] flag for this to work
-            // so we just delegate to a temporary `RegExp`
-            return RegExpJava(expression, package.global, *flags).findAll(input);
-        }
-    }
-    
     shared actual String[] split(
         String input,
         Integer limit) {
@@ -116,7 +81,7 @@ class RegExpJava(String expression, RegExpFlag* flags)
             if (resultLength > limit && limit >= 0) {
                 resultLength = limit;
             }
-            result = Array<String>.OfSize(resultLength, "");
+            result = Array<String>.ofSize(resultLength, "");
             for (value i in 0 : resultLength) {
                 result.set(i, input.measure(i, i + 1));
             }
@@ -128,7 +93,7 @@ class RegExpJava(String expression, RegExpFlag* flags)
             // But in any case we need to copy the result to a
             // new array because we need Ceylon Strings
             value realSize = if (tmpResult.size > limit && limit >= 0) then limit else tmpResult.size;
-            Array<String> realResult = Array<String>.OfSize(realSize, "");
+            Array<String> realResult = Array<String>.ofSize(realSize, "");
             for (value i in 0 : realSize) {
                 realResult.set(i, tmpResult.get(i).string);
             }
@@ -137,34 +102,22 @@ class RegExpJava(String expression, RegExpFlag* flags)
         return result.sequence();
     }
     
-    /**
-     * Determines if the regular expression matches the given string. This call
-     * affects the value returned by {@link #getLastIndex()} if the global flag is
-     * set. Equivalent to: {@code exec(input) != null}
-     *
-     * @param input the string to apply the regular expression to
-     * @return whether the regular expression matches the given string.
-     */
-    shared actual Boolean test(String input) {
-        return find(input) exists;
-    }
-    
     // In JS syntax, a \ in the replacement string has no special meaning.
     // In Java syntax, a \ in the replacement string escapes the next character,
     // so we have to translate \ to \\ before passing it to Java.
-    Pattern _REPLACEMENT_BACKSLASH = Pattern.compile("\\\\");
+    Pattern _REPLACEMENT_BACKSLASH = Pattern.compile("""\\""");
     // To get \\, we have to say \\\\\\\\:
     // \\\\\\\\ --> Java string unescape --> \\\\
     // \\\\ ---> Pattern replacement unescape in replacement preprocessing --> \\
-    String _REPLACEMENT_BACKSLASH_FOR_JAVA = "\\\\\\\\";
+    String _REPLACEMENT_BACKSLASH_FOR_JAVA = """\\\\""";
     // In JS syntax, a $& in the replacement string stands for the whole match.
     // In Java syntax, the equivalent is $0, so we have to translate $& to
     // $0 before passing it to Java. However, we have to watch out for $$&, which
     // is actually a Javascript $$ (see below) followed by a & with no special
     // meaning, and must not get translated.
     Pattern _REPLACEMENT_DOLLAR_AMPERSAND =
-            Pattern.compile("((?:^|\\G|[^$])(?:\\$\\$)*)\\$&");
-    String _REPLACEMENT_DOLLAR_AMPERSAND_FOR_JAVA = "$1\\$0";
+            Pattern.compile("""((?:^|\G|[^$])(?:\$\$)*)\$&""");
+    String _REPLACEMENT_DOLLAR_AMPERSAND_FOR_JAVA = """$1\$0""";
     // In JS syntax, a $` and $' in the replacement string stand for everything
     // before the match and everything after the match.
     // In Java syntax, there is no equivalent, so we detect and reject $` and $'.
@@ -172,16 +125,16 @@ class RegExpJava(String expression, RegExpFlag* flags)
     // (see below) followed by a ` or ' with no special meaning, and must not be
     // rejected.
     Pattern _REPLACEMENT_DOLLAR_APOSTROPHE =
-            Pattern.compile("(?:^|[^$])(?:\\$\\$)*\\$[`']");
+            Pattern.compile("""(?:^|[^$])(?:\$\$)*\$[`']""");
     // In JS syntax, a $$ in the replacement string stands for a (single) dollar
     // sign, $.
     // In Java syntax, the equivalent is \$, so we have to translate $$ to \$
     // before passing it to Java.
-    Pattern _REPLACEMENT_DOLLAR_DOLLAR = Pattern.compile("\\$\\$");
+    Pattern _REPLACEMENT_DOLLAR_DOLLAR = Pattern.compile("""\$\$""");
     // To get \$, we have to say \\\\\\$:
     // \\\\\\$ --> Java string unescape --> \\\$
     // \\\$ ---> Pattern replacement unescape in replacement preprocessing --> \$
-    String _REPLACEMENT_DOLLAR_DOLLAR_FOR_JAVA = "\\\\\\$";
+    String _REPLACEMENT_DOLLAR_DOLLAR_FOR_JAVA = """\\\$""";
     
     shared actual String replace(
         String input,
