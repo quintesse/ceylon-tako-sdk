@@ -16,12 +16,12 @@
 import org.codejive.ceylon.regexp { RExp=RegExp }
 
 native("js")
-class RegExpJavascript(String expression, RegExpFlag* flags)
-        extends RegExp(expression, *flags) {
-    
-    shared actual Boolean global => flags.contains(package.global);
-    shared actual Boolean ignoreCase => flags.contains(package.ignoreCase);
-    shared actual Boolean multiLine => flags.contains(package.multiLine);
+class RegExpJavascript(expression, global = false, ignoreCase = false, multiLine = false)
+        extends RegExp(expression, global, ignoreCase, multiLine) {
+    String expression;
+    Boolean global;
+    Boolean ignoreCase;
+    Boolean multiLine;
     
     String jsflags => (global then "g" else "") +
             (ignoreCase then "i" else "") +

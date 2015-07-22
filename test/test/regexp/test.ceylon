@@ -24,7 +24,7 @@ shared void testCreateNoFlags() {
 
 test
 shared void testCreateWithFlags() {
-    value re = regexp("", global, ignoreCase, global, multiLine);
+    value re = regexp{expression=""; global=true; ignoreCase=true; multiLine=true;};
     assertTrue(re.global);
     assertTrue(re.ignoreCase);
     assertTrue(re.multiLine);
@@ -42,21 +42,21 @@ shared void testCreatePatternError() {
 
 test
 shared void testFind() {
-    value result = regexp("a+p").find(input);
+    value result = regexp{expression="a+p"; global=true;}.find(input);
     print(result);
     assertEquals(result?.string, expected1);
 }
 
 test
 shared void testFindGlobal() {
-    value result = regexp("a+p", global).find(input);
+    value result = regexp{expression="a+p"; global=true;}.find(input);
     print(result);
     assertEquals(result?.string, expected1);
 }
 
 test
 shared void testFindIgnoreCase() {
-    value result = regexp("AAP", ignoreCase).find(input);
+    value result = regexp{expression="AAP"; ignoreCase=true;}.find(input);
     print(result);
     assertEquals(result?.string, expected1);
 }
@@ -70,7 +70,7 @@ shared void testFindAll() {
 
 test
 shared void testFindAllGlobal() {
-    value result = regexp("a+p", global).findAll(input);
+    value result = regexp{expression="a+p"; global=true;}.findAll(input);
     print(result);
     assertEquals(result.string, expected2);
 }
@@ -120,7 +120,7 @@ shared void testReplace() {
 
 test
 shared void testReplaceGlobal() {
-    value result = regexp("aap", global).replace(input, "noot");
+    value result = regexp{expression="aap"; global=true;}.replace(input, "noot");
     print(result);
     assertEquals(result, "De noot is uit de (mouw): het was een broodje noot! Ben ik mooi in de noot gelogeerd!");
 }
@@ -144,7 +144,7 @@ shared void testReplaceError() {
 
 test
 shared void testSplit() {
-    value result = regexp(" ", global).split(input);
+    value result = regexp{expression=" "; global=true;}.split(input);
     print(result);
     assertEquals(result, ["De", "aap", "is", "uit", "de", "(mouw):", "het", "was", "een", "broodje", "aap!", "Ben", "ik", "mooi", "in", "de", "aap", "gelogeerd!"]);
 }
@@ -152,7 +152,7 @@ shared void testSplit() {
 test
 shared void testTest() {
     assertTrue(regexp("a+p").test(input));
-    assertTrue(regexp("^de.*RD!$", ignoreCase).test(input));
+    assertTrue(regexp{expression="^de.*RD!$"; ignoreCase=true;}.test(input));
     assertTrue(regexp("[0-9]+ years").test("90 years old"));
 }
 

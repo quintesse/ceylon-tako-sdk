@@ -21,14 +21,13 @@
 shared native RegExp regexp(
         "The regular expression to be used for all operations"
         String expression,
-        "Flags to change the default behaviour"
-        RegExpFlag* flags);
-
-shared interface RegExpFlag
-        of global | ignoreCase | multiLine { }
-shared object global satisfies RegExpFlag {}
-shared object ignoreCase satisfies RegExpFlag {}
-shared object multiLine satisfies RegExpFlag {}
+        "For returning all matches instead of only the first"
+        Boolean global = false,
+        "For case-insensitive matching"
+        Boolean ignoreCase = false,
+        "For multi-line matching where `^` and `$` also match line delimiters and not
+         just the beginning or end of the entire input string"
+        Boolean multiLine = false);
 
 """A class for cross-platform regular expressions modeled on Javascript's
    `RegExp`, plus some extra methods like Java's and Javascript `String`'s
@@ -49,17 +48,18 @@ shared object multiLine satisfies RegExpFlag {}
    exist small differences between the different browser implementations,
    be sure to test thoroughly, especially when using more advanced features.
    """
-shared sealed abstract class RegExp(expression, flags) {
+shared sealed abstract class RegExp(expression, global = false, ignoreCase = false, multiLine = false) {
     "The regular expression to be used for all operations"
     shared String expression;
-    "Flags to change the default behaviour"
-    RegExpFlag* flags;
+    "For returning all matches instead of only the first"
+    shared Boolean global;
+    "For case-insensitive matching"
+    shared Boolean ignoreCase;
+    "For multi-line matching where `^` and `$` also match line delimiters and not
+     just the beginning or end of the entire input string"
+    shared Boolean multiLine;
     
     shared formal variable Integer lastIndex;
-    
-    shared formal Boolean global;
-    shared formal Boolean ignoreCase;
-    shared formal Boolean multiLine;
     
     """Applies the regular expression to the given string. This call affects the
        value returned by {@link #getLastIndex()} if the global flag is set.
@@ -86,7 +86,7 @@ shared sealed abstract class RegExp(expression, flags) {
         } else {
             // We need the [[package.global]] flag for this to work
             // so we just delegate to a temporary `RegExp`
-            return regexp(expression, package.global, *flags).findAll(input);
+            return regexp(expression, true, ignoreCase, multiLine).findAll(input);
         }
     }
     
@@ -183,8 +183,10 @@ shared String quote(
 native("jvm")
 shared RegExp regexp(
     String expression,
-    RegExpFlag* flags) {
-    return RegExpJava(expression, *flags);
+    Boolean global = false,
+    Boolean ignoreCase = false,
+    Boolean multiLine = false) {
+    return RegExpJava(expression, global, ignoreCase, multiLine);
 }
 
 /****************
@@ -194,7 +196,9 @@ shared RegExp regexp(
 native("js")
 shared RegExp regexp(
     String expression,
-    RegExpFlag* flags) {
-    return RegExpJavascript(expression, *flags);
+    Boolean global = false,
+    Boolean ignoreCase = false,
+    Boolean multiLine = false) {
+    return RegExpJavascript(expression, global, ignoreCase, multiLine);
 }
 

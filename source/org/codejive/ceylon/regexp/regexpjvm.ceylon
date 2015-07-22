@@ -18,16 +18,21 @@ import java.util.regex { Pattern, Matcher }
 import ceylon.interop.java { javaString }
 
 native("jvm")
-class RegExpJava(String expression, RegExpFlag* flags)
-        extends RegExp(expression, *flags) {
+class RegExpJava(expression, global = false, ignoreCase = false, multiLine = false)
+        extends RegExp(expression, global, ignoreCase, multiLine) {
+    String expression;
+    Boolean global;
+    Boolean ignoreCase;
+    Boolean multiLine;
+    
     shared actual variable Integer lastIndex = 0;
     
     Integer patternFlags {
         variable Integer f = Pattern.\iUNIX_LINES;
-        if (flags.contains(package.ignoreCase)) {
+        if (ignoreCase) {
             f = f.or(Pattern.\iCASE_INSENSITIVE).or(Pattern.\iUNICODE_CASE);
         }
-        if (flags.contains(package.multiLine)) {
+        if (multiLine) {
             f = f.or(Pattern.\iMULTILINE);
         }
         return f;
@@ -39,10 +44,6 @@ class RegExpJava(String expression, RegExpFlag* flags)
     } catch (Exception ex) {
         throw RegExpException("Problem found within regular expression", ex);
     }
-    
-    shared actual Boolean global => flags.contains(package.global);
-    shared actual Boolean ignoreCase => flags.contains(package.ignoreCase);
-    shared actual Boolean multiLine => flags.contains(package.multiLine);
     
     shared actual MatchResult? find(
         String input) {
