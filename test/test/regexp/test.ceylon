@@ -11,10 +11,12 @@ shared void run() {
 String input = "De aap is uit de (mouw): het was een broodje aap! Ben ik mooi in de aap gelogeerd!";
 String expected1 = "MatchResult[3-6 'aap' []]";
 String expected2 = "[MatchResult[3-6 'aap' []], MatchResult[45-48 'aap' []], MatchResult[68-71 'aap' []]]";
+String expected3 = "[MatchResult[3-6 'aap' [aap]], MatchResult[45-48 'aap' [aap]], MatchResult[68-71 'aap' [aap]]]";
+String expected4 = "[MatchResult[0-9 'De aap is' [De, is]], MatchResult[65-81 'de aap gelogeerd' [de, gelogeerd]]]";
 
 test
 shared void testCreateNoFlags() {
-    value re = regExp("");
+    value re = regexp("");
     assertFalse(re.global);
     assertFalse(re.ignoreCase);
     assertFalse(re.multiLine);
@@ -22,7 +24,7 @@ shared void testCreateNoFlags() {
 
 test
 shared void testCreateWithFlags() {
-    value re = regExp("", global, ignoreCase, global, multiLine);
+    value re = regexp("", global, ignoreCase, global, multiLine);
     assertTrue(re.global);
     assertTrue(re.ignoreCase);
     assertTrue(re.multiLine);
@@ -31,7 +33,7 @@ shared void testCreateWithFlags() {
 test
 shared void testCreatePatternError() {
     try {
-        regExp("\\");
+        regexp("\\");
         assertFalse(true, "We shouldn't be here");
     } catch (Exception ex) {
         assertThatException(RegExpException());
@@ -40,104 +42,125 @@ shared void testCreatePatternError() {
 
 test
 shared void testFind() {
-    value result = regExp("a+p").find(input);
+    value result = regexp("a+p").find(input);
     print(result);
     assertEquals(result?.string, expected1);
 }
 
 test
 shared void testFindGlobal() {
-    value result = regExp("a+p", global).find(input);
+    value result = regexp("a+p", global).find(input);
     print(result);
     assertEquals(result?.string, expected1);
 }
 
 test
 shared void testFindIgnoreCase() {
-    value result = regExp("AAP", ignoreCase).find(input);
+    value result = regexp("AAP", ignoreCase).find(input);
     print(result);
     assertEquals(result?.string, expected1);
 }
 
 test
 shared void testFindAll() {
-    value result = regExp("a+p").findAll(input);
+    value result = regexp("a+p").findAll(input);
     print(result);
     assertEquals(result.string, expected2);
 }
 
 test
 shared void testFindAllGlobal() {
-    value result = regExp("a+p", global).findAll(input);
+    value result = regexp("a+p", global).findAll(input);
     print(result);
     assertEquals(result.string, expected2);
+}
+
+test
+shared void testFindAllGroup() {
+    value result = regexp("(a+p)").findAll(input);
+    print(result);
+    assertEquals(result.string, expected3);
 }
 
 test
 shared void testFindAllGroups() {
-    value result = regExp("a+p").findAll(input);
+    value result = regexp("""(\w+)\saap\s(\w+)""").findAll(input);
     print(result);
-    assertEquals(result.string, expected2);
+    assertEquals(result.string, expected4);
 }
 
 test
 shared void testNotFound() {
-    value result = regExp("burritos").find(input);
+    value result = regexp("burritos").find(input);
     assertNull(result);
 }
 
 test
 shared void testQuote() {
-    value q = quote("$.*[]^\\");
+    value q = quote("""$.*[]^\""");
+    assertEquals(q, """\$\.\*\[\]\^\\""");
+}
+
+test
+shared void testQuote2() {
+    value q = quote("""\E\Q\E""");
     print(q);
-    assertEquals(q, "\\Q$.*[]^\\\\E");
+    assertEquals(q, """\\E\\Q\\E""");
 }
 
 test
 shared void testReplace() {
-    value result = regExp("aap").replace(input, "noot");
+    value result = regexp("aap").replace(input, "noot");
     print(result);
     assertEquals(result, "De noot is uit de (mouw): het was een broodje aap! Ben ik mooi in de aap gelogeerd!");
-    value result2 = regExp("[0-9]+ years").replace("90 years old", "very");
+    value result2 = regexp("[0-9]+ years").replace("90 years old", "very");
     print(result2);
     assertEquals(result2, "very old");
 }
 
 test
 shared void testReplaceGlobal() {
-    value result = regExp("aap", global).replace(input, "noot");
+    value result = regexp("aap", global).replace(input, "noot");
     print(result);
     assertEquals(result, "De noot is uit de (mouw): het was een broodje noot! Ben ik mooi in de noot gelogeerd!");
 }
 
-test
+test native
+shared void testReplaceError();
+
+test native("jvm")
 shared void testReplaceError() {
     try {
-        regExp("aap").replace(input, "$'");
+        regexp("aap").replace(input, "$'");
         assertFalse(true, "We shouldn't be here");
     } catch (Exception ex) {
         assertThatException(RegExpException());
     }
 }
 
+test native("js")
+shared void testReplaceError() {
+}
+
 test
 shared void testSplit() {
-    value result = regExp(" ", global).split(input);
+    value result = regexp(" ", global).split(input);
     print(result);
     assertEquals(result, ["De", "aap", "is", "uit", "de", "(mouw):", "het", "was", "een", "broodje", "aap!", "Ben", "ik", "mooi", "in", "de", "aap", "gelogeerd!"]);
 }
 
 test
 shared void testTest() {
-    assertTrue(regExp("a+p").test(input));
-    assertTrue(regExp("^de.*RD!$", ignoreCase).test(input));
-    assertTrue(regExp("[0-9]+ years").test("90 years old"));
+    assertTrue(regexp("a+p").test(input));
+    assertTrue(regexp("^de.*RD!$", ignoreCase).test(input));
+    assertTrue(regexp("[0-9]+ years").test("90 years old"));
 }
 
 test
 shared void testTestQuoted() {
-    assertFalse(regExp(" (mouw): ").test(input));
-    assertTrue(regExp(quote(" (mouw): ")).test(input));
+    assertFalse(regexp(" (mouw): ").test(input));
+    print(quote(" (mouw): "));
+    assertTrue(regexp(quote(" (mouw): ")).test(input));
 }
 
 shared void runAll() {
@@ -149,9 +172,11 @@ shared void runAll() {
     testFindIgnoreCase();
     testFindAll();
     testFindAllGlobal();
+    testFindAllGroup();
     testFindAllGroups();
     testNotFound();
     testQuote();
+    testQuote2();
     testReplace();
     testReplaceGlobal();
     testReplaceError();
