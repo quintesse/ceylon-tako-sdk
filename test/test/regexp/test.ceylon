@@ -36,7 +36,8 @@ shared void testCreatePatternError() {
         regexp("\\");
         assertFalse(true, "We shouldn't be here");
     } catch (Exception ex) {
-        assertThatException(RegExpException());
+        assertThatException(ex).hasType(`RegExpException`);
+        assertThatException(ex).hasMessage("Problem found within regular expression");
     }
 }
 
@@ -134,7 +135,8 @@ shared void testReplaceError() {
         regexp("aap").replace(input, "$'");
         assertFalse(true, "We shouldn't be here");
     } catch (Exception ex) {
-        assertThatException(RegExpException());
+        assertThatException(ex).hasType(`RegExpException`);
+        assertThatException(ex).hasMessage("$\` and $' replacements are not supported");
     }
 }
 
