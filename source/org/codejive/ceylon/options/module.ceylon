@@ -3,5 +3,5 @@
 by("Tako Schotanus")
 license("ASL2")
 module org.codejive.ceylon.options "1.5.0" {
-    shared import ceylon.collection "1.1.0";
+    shared import ceylon.collection "1.2.0";
 }
