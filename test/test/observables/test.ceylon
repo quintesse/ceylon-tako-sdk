@@ -1,8 +1,8 @@
 import ceylon.test { ... }
-import ceylon.test.core {
+import org.codejive.ceylon.observables { ... }
+import ceylon.test.engine {
     DefaultLoggingListener
 }
-import org.codejive.ceylon.observables { ... }
 
 shared void run() {
     createTestRunner([`module test.observables`], [DefaultLoggingListener()]).run();

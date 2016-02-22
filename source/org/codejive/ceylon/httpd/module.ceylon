@@ -9,5 +9,5 @@ module org.codejive.ceylon.httpd "1.2.3" {
     import java.base "7";
     import oracle.jdk.httpserver "7";
     import org.codejive.ceylon.options "1.5.1";
-    import ceylon.interop.java "1.2.0";
+    import ceylon.interop.java "1.2.1";
 }
