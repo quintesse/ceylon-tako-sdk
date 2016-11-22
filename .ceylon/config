@@ -4,6 +4,10 @@ encoding=UTF-8
 offline=false
 flatclasspath=false
 autoexportmavendependencies=false
+fullyexportmavendependencies=false
+
+[runtool]
+compile=check
 
 [compiler]
 source=source
