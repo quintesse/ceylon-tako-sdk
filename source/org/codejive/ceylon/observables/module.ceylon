@@ -1,3 +1,3 @@
-module org.codejive.ceylon.observables "1.0.1" {
-    import ceylon.collection "1.3.0";
+module org.codejive.ceylon.observables "1.0.2" {
+    import ceylon.collection "1.3.1";
 }
