@@ -5,7 +5,7 @@
 by("The Ceylon Team")
 license("ASLv2")
 native("jvm")
-module org.codejive.ceylon.httpd "1.2.5" {
+module org.codejive.ceylon.httpd "1.2.6" {
     import java.base "7";
     import oracle.jdk.httpserver "7";
     import org.codejive.ceylon.options "1.5.3";

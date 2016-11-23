@@ -163,29 +163,34 @@ class CeylonHttpHandler(Boolean list, String[] indices, Boolean verbose) satisfi
     }
 }
 
-void start(Integer port, Boolean list, String[] indices, Boolean verbose) {
+void start(String iface, Integer port, Boolean list, String[] indices, Boolean verbose) {
     // Create server and bind the port to listen to
-    HttpServer server = createHttpServer(InetSocketAddress(port), 0);
+    value addr = InetSocketAddress(iface, port);
+    HttpServer server = createHttpServer(addr, 0);
     server.createContext("/", CeylonHttpHandler(list, indices, verbose));
     server.executor = null;
     // Start to accept incoming connections
     server.start();
     if (verbose) {
-        sysOut.println("Started server on port ``port``");
+        sysOut.println("Started server on port ``addr.string``");
     }
 }
 
 shared void run() {
     value opts = Options {
-        usage = "Usage: ceylon run org.codejive.ceylon.httpd/1.2.2 -- --port <portnumber> <options>";
-        noArgsHelp = "use -? for a list of possible options";
+        usage = "Usage: ceylon run `` `module`.string `` -- --port <portnumber> <options>";
         options = [ Option("help", ["?"], "This help"),
+        Option {
+            name="interface";
+            matches=["f", "interface"];
+            docs="The IP address of the interface to connect to";
+            hasValue=true;
+        },
         Option {
             name="port";
             matches=["p", "port"];
             docs="The port number to run the service on";
             hasValue=true;
-            required=true;
         },
         Option {
             name="list";
@@ -217,11 +222,12 @@ shared void run() {
             if (exists err) {
                 print(err.messages);
             } else {
+                String iface = res.options["interface"]?.first else "0.0.0.0";
                 Integer port = parseInteger(res.options["port"]?.first else "8080") else 8080;
                 Boolean list = res.options.defines("list");
                 String[] indices = res.options["indices"] else [];
                 Boolean verbose = res.options.defines("verbose");
-                start(port, list, indices, verbose);
+                start(iface, port, list, indices, verbose);
                 currentThread().join();
             }
         }
